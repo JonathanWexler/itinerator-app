@@ -96,7 +96,7 @@
 </template>
 
 <script>
-import jsPDF from 'jsPDF'
+import { jsPDF } from 'jspdf';
 
   export default {
     name: 'Dashboard',
@@ -165,10 +165,38 @@ import jsPDF from 'jsPDF'
         nativeEvent.stopPropagation()
       },
       download () {
-        let pdfName = 'test'; 
         var doc = new jsPDF();
-        doc.text(this.name, 10, 10);
-        doc.save(pdfName + '.pdf');
+
+        doc.setFontSize(30);
+        doc.text(`${this.name}`, 20, 30);
+        doc.setFontSize(16);
+        doc.text(`${this.displayDates}`, 20, 40);
+        let offset = 40;
+        let page = 1;
+        const description = "This is the description. This is fun. This is the description. This is fun."
+
+        this.events.forEach((event, index) => {
+          if (offset >= page * 250) {
+            doc.addPage();
+            offset = 10;
+          }
+          console.log('event', event, this.betweenDates[index])
+          doc.setFontSize(22);
+          doc.text(`${this.betweenDates[index].toDateString()}`, 20, 20 + offset);
+          event.forEach(activity => {
+            doc.setFontSize(16);
+            doc.text(new Date(activity.start).toLocaleTimeString(), 60, 30 + offset, {
+                align: 'right',
+            });
+            doc.text(activity.name, 70, 30 + offset);
+            doc.setFontSize(10);
+            doc.text(description, 70, 35 + offset);
+            offset += 15;
+          })
+          offset += 20;
+        });
+
+        doc.save(`${this.name} itinerary.pdf`);
       },
       viewDay ({ date }) {
         this.focus = date
