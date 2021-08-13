@@ -10,19 +10,53 @@
           {{ itin[1].name || formatDates(itin[0].split('_'))}}
           </span>
         <h2> {{displayDates}} </h2>
-        <span>
+        <span v-if="this.selectedDates.length && this.sortedEvents.length">
           <v-btn
           @click="download"
-          v-if="this.selectedDates.length"
           class="export"
           elevation="2" text>
           Export PDF
         </v-btn>
+        <v-btn @click="deleteItinerary">
+          Delete
+        </v-btn>
         </span>
       </v-col>
       <v-col cols="3" xs="1">
+        <section v-if="viewDate">
+          <form>
+            <v-text-field
+              v-model="viewDate.event.name"
+              :counter="30"
+              label="Activity Name"
+              required
+            ></v-text-field>
+            <v-textarea
+              v-model="viewDate.event.description"
+              :counter="100"
+              label="Activity Details"
+            ></v-textarea>
+            <v-checkbox
+              v-model="viewDate.event.highlight"
+              label="Highlight"
+            ></v-checkbox>
+            <v-btn
+              class="mr-4"
+              @click="saveEvent"
+            >
+              Save
+            </v-btn>
+            <v-btn @click="closeEvent">
+              Close
+            </v-btn>
+            <v-btn @click="deleteEvent">
+              Delete
+            </v-btn>
+          </form>
+        </section>
         <v-date-picker
           ref="picker"
+          v-else
           dark
           show-adjacent-months
           range
@@ -44,7 +78,7 @@
             :weekdays="weekday"
             :type="type"
             :start="day"
-            :events="events[index]"
+            :events="(events[day] || {}).days"
             :event-overlap-mode="mode"
             :event-overlap-threshold="30"
             :event-color="getEventColor"
@@ -53,10 +87,18 @@
             @mousemove:time="mouseMove"
             @mouseup:time="endDrag"
             @mouseleave.native="cancelDrag(index)"
-            @click:event="showEvent"
+            @click:event="showEvent($event, index)"
             @click:more="viewDay"
             @click:date="viewDay"
-            />
+            >
+            <template v-slot:day-body="{ date, week }">
+              <div
+                class="v-current-time"
+                :class="{ first: date === week[0].date }"
+                :style="{ top: nowY }"
+              ></div>
+            </template>
+          </v-calendar>
             <v-menu
           v-model="selectedOpen"
           :close-on-content-click="false"
@@ -131,7 +173,7 @@ import { jsPDF } from 'jspdf';
         { text: 'Mon, Wed, Fri', value: [1, 3, 5] },
       ],
       values: {},
-      events: [],
+      events: {},
       colors: ['blue', 'indigo', 'deep-purple', 'cyan', 'green', 'orange', 'grey darken-1'],
       names: ['Meeting', 'Holiday', 'PTO', 'Travel', 'Event', 'Birthday', 'Conference', 'Party'],
       dragEvent: null,
@@ -139,13 +181,35 @@ import { jsPDF } from 'jspdf';
       createEvent: null,
       createStart: null,
       extendOriginal: null,
-      itineraries: {}
+      itineraries: {},
+      viewDate: null
     }),
     mounted () {
       // localStorage.setItem('itinerator', '{}')
       this.setItineraries()
     },
     computed: {
+      sortedEvents () {
+        if (!Object.keys(this.events).length) return []
+        return this.betweenDates.map(d => this.events[d].days)
+      },
+      betweenDatesMap () {
+        return this.betweenDates.map(d => d.toISOString().split('T')[0])
+      },
+      today () {
+        const today = (new Date().toISOString()).split('T')[0]
+        return today
+      },
+      cal () {
+        this.$nextTick()
+        window.refs = this.$refs
+        const todayBetween = this.betweenDatesMap.indexOf(this.today)
+        return this.$refs[`calendar-${todayBetween}`]
+      },
+      nowY () {
+        // TODO: FIX THIS
+        return this.cal ? this.cal.timeToY(this.cal.times.now) + 'px' : '-10px'
+      },
       allItineraries () {
         return Object.entries(this.itineraries)
       },
@@ -157,21 +221,52 @@ import { jsPDF } from 'jspdf';
       }
     },
     methods: {
-      showEvent ({ nativeEvent, event }) {
-        const open = () => {
-          this.selectedEvent = event
-          this.selectedElement = nativeEvent.target
-          requestAnimationFrame(() => requestAnimationFrame(() => this.selectedOpen = true))
-        }
+      saveEvent () {
+        // const { event, index } = this.viewDate
+        // this.events[index] = event
+        this.saveEvents()
+        this.closeEvent()
+      },
+      deleteItinerary () {
+        delete this.itineraries[this.stringifiedDates]
+        this.selectedDates = []
+        this.dates = []
+        this.betweenDates = []
+        this.name = null
+        this.saveEvents()
+      },
+      closeEvent () {
+        this.viewDate = null;
+      },
 
-        if (this.selectedOpen) {
-          this.selectedOpen = false
-          requestAnimationFrame(() => requestAnimationFrame(() => open()))
-        } else {
-          open()
+      deleteEvent () {
+        const { index, event } = this.viewDate
+        const activityIndex = this.events[this.betweenDates[index]].days.indexOf(event)
+        this.events[this.betweenDates[index]].days.splice(activityIndex, 1)
+        this.saveEvent()
+      },
+      showDate (event, index) {
+        this.viewDate = {
+          event,
+          index
         }
+      },
+      showEvent ({ nativeEvent, event }, index) {
+        // const open = () => {
+        //   this.selectedEvent = event
+        //   this.selectedElement = nativeEvent.target
+        //   requestAnimationFrame(() => requestAnimationFrame(() => this.selectedOpen = true))
+        // }
 
-        nativeEvent.stopPropagation()
+        // if (this.selectedOpen) {
+        //   this.selectedOpen = false
+        //   requestAnimationFrame(() => requestAnimationFrame(() => open()))
+        // } else {
+        //   open()
+        // }
+
+        // nativeEvent.stopPropagation()
+        this.showDate(event, index);
       },
       download () {
         var doc = new jsPDF();
@@ -182,14 +277,12 @@ import { jsPDF } from 'jspdf';
         doc.text(`${this.displayDates}`, 20, 40);
         let offset = 40;
         let page = 1;
-        const description = "This is the description. This is fun. This is the description. This is fun."
 
-        this.events.forEach((event, index) => {
+        this.sortedEvents.filter(ev => ev).forEach((event, index) => {
           if (offset >= page * 250) {
             doc.addPage();
             offset = 10;
           }
-          console.log('event', event, this.betweenDates[index])
           doc.setFontSize(22);
           doc.text(`${this.betweenDates[index].toDateString()}`, 20, 20 + offset);
           event.forEach(activity => {
@@ -199,7 +292,7 @@ import { jsPDF } from 'jspdf';
             });
             doc.text(activity.name, 70, 30 + offset);
             doc.setFontSize(10);
-            doc.text(description, 70, 35 + offset);
+            if (activity.description) doc.text(activity.description, 70, 35 + offset);
             offset += 15;
           })
           offset += 20;
@@ -229,7 +322,7 @@ import { jsPDF } from 'jspdf';
         const localValue = JSON.parse(localStorage.getItem('itinerator') || {})
         this.itineraries = localValue
       },
-      saveEvent () {
+      saveEvents () {
         this.itineraries[this.stringifiedDates] = {
           name: this.name,
           events: this.events
@@ -242,7 +335,7 @@ import { jsPDF } from 'jspdf';
           this.dragEvent = event
           this.dragTime = null
           this.extendOriginal = null
-          this.saveEvent()
+          this.saveEvents()
         }
       },
       startTime (tms, index) {
@@ -250,26 +343,29 @@ import { jsPDF } from 'jspdf';
 
         if (this.dragEvent && this.dragTime === null) {
           const start = this.dragEvent.start
-
+        
           this.dragTime = mouse - start
         } else {
           this.createStart = this.roundTime(mouse)
           this.createEvent = {
-            name: `Activity #${this.events[index].length + 1}`,
+            name: `Activity #${this.events[this.betweenDates[index]].days.length + 1}`,
             color: this.rndElement(this.colors),
             start: this.createStart,
             end: this.createStart,
             timed: true,
           }
-
-          this.events[index].push(this.createEvent)
+          this.events[this.betweenDates[index]].days.push(this.createEvent)
+          // this.events.forEach((day, dayIndex) => {
+          //   if (index !== dayIndex) day.pop()
+          // })
+          console.log('EVENTS', this.events)
         }
       },
       extendBottom (event) {
         this.createEvent = event
         this.createStart = event.start
         this.extendOriginal = event.end
-        this.saveEvent()
+        this.saveEvents()
       },
       mouseMove (tms) {
         const mouse = this.toTime(tms)
@@ -299,16 +395,16 @@ import { jsPDF } from 'jspdf';
         this.createEvent = null
         this.createStart = null
         this.extendOriginal = null
-        this.saveEvent()
+        this.saveEvents()
       },
       cancelDrag (index) {
         if (this.createEvent) {
           if (this.extendOriginal) {
             this.createEvent.end = this.extendOriginal
           } else {
-            const i = this.events[index].indexOf(this.createEvent)
+            const i =  this.events[this.betweenDates[index]].days.indexOf(this.createEvent)
             if (i !== -1) {
-              this.events[index].splice(i, 1)
+              this.events[this.betweenDates[index]].days.splice(i, 1)
             }
           }
         }
@@ -339,7 +435,7 @@ import { jsPDF } from 'jspdf';
         return date.split('-').join('/')
       },
       nameChange () {
-        this.saveEvent()
+        this.saveEvents()
       },
       getBetweenDates ([startDate, endDate]) {
         startDate = new Date(this.slashDate(startDate))
@@ -360,7 +456,11 @@ import { jsPDF } from 'jspdf';
       emitDates (dates) {
         this.selectedDates = dates
         this.betweenDates = this.getBetweenDates(dates)
-        this.events = Array(this.betweenDates.length).fill([])
+        this.events = this.betweenDates.reduce((accum, date) => {
+          accum[date] = { days: [] }
+          return accum
+        }, {});
+        console.log('MAKING EVENTS', this.events)
         this.$emit('date-select', dates)
       },
       // getEvents ({ start, end }) {
@@ -397,7 +497,7 @@ import { jsPDF } from 'jspdf';
     },
   }
 </script>
-<style scoped>
+<style scoped lang="scss">
 .export {
   /* position: absolute;
   left: 20px;
@@ -414,5 +514,24 @@ import { jsPDF } from 'jspdf';
   margin: 10px;
   justify-content: space-between;
   cursor: pointer;
+}
+.v-current-time {
+  height: 2px;
+  background-color: #ea4335;
+  position: absolute;
+  left: -1px;
+  right: 0;
+  pointer-events: none;
+
+  &.first::before {
+    content: '';
+    position: absolute;
+    background-color: #ea4335;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: -5px;
+    margin-left: -6.5px;
+  }
 }
 </style>
