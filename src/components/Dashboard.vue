@@ -2,6 +2,13 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
+        <v-btn
+          @click="download"
+          v-if="this.selectedDates.length"
+          class="export"
+          elevation="2" text>
+          Export PDF
+        </v-btn>
         <span
           class="itinerary"
           v-for="(itin, index) in allItineraries"
@@ -9,7 +16,7 @@
           @click="selectItinerary(itin[0])">
           {{ itin[1].name || formatDates(itin[0].split('_'))}}
           </span>
-        <h2 @click="download"> {{displayDates}} </h2>
+        <h2> {{displayDates}} </h2>
       </v-col>
       <v-col cols="3">
         <v-date-picker
@@ -389,6 +396,11 @@ import { jsPDF } from 'jspdf';
   }
 </script>
 <style scoped>
+.export {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+}
 .cal-section {
   max-height: 400px;
 }
