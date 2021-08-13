@@ -20,7 +20,7 @@
         </v-btn>
         </span>
       </v-col>
-      <v-col cols="3">
+      <v-col cols="3" xs="1">
         <v-date-picker
           ref="picker"
           dark
@@ -31,7 +31,7 @@
           @change="emitDates">
           </v-date-picker>
       </v-col>
-      <v-col cols="8" offset-md="1">
+      <v-col cols="8" offset-md="1" xs="12">
         <v-row justify="center">
           <v-text-field label="Trip Name" v-model="name" @change="nameChange"></v-text-field>
         </v-row>
