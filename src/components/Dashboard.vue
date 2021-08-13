@@ -266,7 +266,7 @@ import { jsPDF } from 'jspdf';
         // }
 
         // nativeEvent.stopPropagation()
-        this.showDate(event, index);
+        this.showDate(event, index, nativeEvent);
       },
       download () {
         var doc = new jsPDF();
