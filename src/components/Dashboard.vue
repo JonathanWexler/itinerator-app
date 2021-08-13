@@ -9,7 +9,7 @@
           @click="selectItinerary(itin[0])">
           {{ itin[1].name || formatDates(itin[0].split('_'))}}
           </span>
-        <h2> {{displayDates}} </h2>
+        <h2 @click="download"> {{displayDates}} </h2>
       </v-col>
       <v-col cols="3">
         <v-date-picker
@@ -96,6 +96,8 @@
 </template>
 
 <script>
+import jsPDF from 'jsPDF'
+
   export default {
     name: 'Dashboard',
     data: () => ({
@@ -161,6 +163,12 @@
         }
 
         nativeEvent.stopPropagation()
+      },
+      download () {
+        let pdfName = 'test'; 
+        var doc = new jsPDF();
+        doc.text(this.name, 10, 10);
+        doc.save(pdfName + '.pdf');
       },
       viewDay ({ date }) {
         this.focus = date

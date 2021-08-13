@@ -20,10 +20,10 @@
           class="shrink mt-1 hidden-sm-and-down"
           contain
           min-width="100"
-          src="https://i.imgur.com/nBcxy9B.png"
+          src="https://i.imgur.com/P3JJtlS.png"
           width="200"
         />
-      </div>
+      </div>  
 
       <v-spacer></v-spacer>
     </v-app-bar>
