@@ -185,7 +185,10 @@ import { jsPDF } from 'jspdf';
       viewDate: null
     }),
     mounted () {
-      // localStorage.setItem('itinerator', '{}')
+      if (localStorage.getItem('itinerator-clear') !== 'true') {
+        localStorage.setItem('itinerator', '{}')
+        localStorage.setItem('itinerator-clear', 'true')
+      }
       this.setItineraries()
     },
     computed: {
