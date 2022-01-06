@@ -57,7 +57,7 @@
             <v-card v-for="(activityEvent, index) in sortedEvents.flat()" :key="index"
               :color="activityEvent.color">
               <h1>{{activityEvent.name}}</h1>
-              <h1>{{new Date(activityEvent.start)}}</h1>
+              <h5>{{activityDateFormat(activityEvent.start)}}</h5>
             </v-card>
           </section>
         </section>
@@ -227,6 +227,11 @@ import { jsPDF } from 'jspdf';
       }
     },
     methods: {
+      activityDateFormat (time) {
+        const date = new Date(time)
+        const day = date.toString().split(' ').slice(0,3).join(' ')
+        return `${day} ${date.toLocaleTimeString()}`;
+      },
       saveEvent () {
         // const { event, index } = this.viewDate
         // this.events[index] = event
