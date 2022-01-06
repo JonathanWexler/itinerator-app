@@ -2,13 +2,17 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
-        <span
-          class="itinerary"
+      <v-btn
+          class="ma-2"
+          :outlined="itin.key !== activeButtonKey"
           v-for="(itin, index) in allItineraries"
+          color="primary"
           :key="index"
-          @click="selectItinerary(itin[0])">
-          {{ itin[1].name || formatDates(itin[0].split('_'))}}
-          </span>
+          @click="selectItinerary(itin.key)"
+        >
+          <!-- <h5>{{JSON.stringify(itin.active)}}</h5> -->
+          {{ itin.name || formatDates(itin.key.split('_'))}}
+        </v-btn>
         <h2> {{displayDates}} </h2>
         <span v-if="this.selectedDates.length && this.sortedEvents.length">
           <v-btn
@@ -25,25 +29,10 @@
       <v-col cols="3" xs="1">
         <section v-if="viewDate">
           <form>
-            <v-text-field
-              v-model="viewDate.event.name"
-              :counter="30"
-              label="Activity Name"
-              required
-            ></v-text-field>
-            <v-textarea
-              v-model="viewDate.event.description"
-              :counter="100"
-              label="Activity Details"
-            ></v-textarea>
-            <v-checkbox
-              v-model="viewDate.event.highlight"
-              label="Highlight"
-            ></v-checkbox>
-            <v-btn
-              class="mr-4"
-              @click="saveEvent"
-            >
+            <v-text-field v-model="viewDate.event.name" :counter="30" label="Activity Name" required></v-text-field>
+            <v-textarea v-model="viewDate.event.description" :counter="100" label="Activity Details"></v-textarea>
+            <v-checkbox v-model="viewDate.event.highlight" label="Highlight"></v-checkbox>
+            <v-btn class="mr-4" @click="saveEvent">
               Save
             </v-btn>
             <v-btn @click="closeEvent">
@@ -54,16 +43,26 @@
             </v-btn>
           </form>
         </section>
-        <v-date-picker
-          ref="picker"
-          v-else
-          dark
-          show-adjacent-months
-          range
-          no-title
-          v-model="dates"
-          @change="emitDates">
+        <section v-else>
+          <v-card fluid class="tab-bar" v-if="activeButtonKey">
+            <v-tabs v-model="tab" background-color="primary accent-4" fixed-tabs center-active dark>
+              <v-tabs-slider color="yellow"></v-tabs-slider>
+              <v-tab>Calendar</v-tab>
+              <v-tab>Activities</v-tab>
+            </v-tabs>
+          </v-card>
+          <v-date-picker v-if="tab === 0" ref="picker" dark show-adjacent-months range no-title v-model="dates" @change="emitDates">
           </v-date-picker>
+          <section v-else>
+            <v-card v-for="(activityEvent, index) in sortedEvents.flat()" :key="index"
+              :color="activityEvent.color">
+              <h1>{{activityEvent.name}}</h1>
+              <h1>{{new Date(activityEvent.start)}}</h1>
+            </v-card>
+          </section>
+        </section>
+
+
       </v-col>
       <v-col cols="8" offset-md="1" xs="12">
         <v-row justify="center">
@@ -155,6 +154,7 @@ import { jsPDF } from 'jspdf';
       name: '',
       focus: '',
       dates: [],
+      tab: 0,
       selectedOpen: false,
       selectedEvent: {},
       selectedElement: {},
@@ -182,7 +182,8 @@ import { jsPDF } from 'jspdf';
       createStart: null,
       extendOriginal: null,
       itineraries: {},
-      viewDate: null
+      viewDate: null,
+      activeButtonKey: null
     }),
     mounted () {
       if (localStorage.getItem('itinerator-clear') !== 'true') {
@@ -214,7 +215,9 @@ import { jsPDF } from 'jspdf';
         return this.cal ? this.cal.timeToY(this.cal.times.now) + 'px' : '-10px'
       },
       allItineraries () {
-        return Object.entries(this.itineraries)
+        return Object.entries(this.itineraries).map(([key,v]) => {
+          return {...v, key}
+        })
       },
       displayDates () {
         return this.formatDates(this.selectedDates)
@@ -313,7 +316,12 @@ import { jsPDF } from 'jspdf';
         else if (!second || first == second) return date1.toDateString()
         return `${date1.toDateString()} to ${date2.toDateString()}`
       },
+      clearActive () {
+        this.activeButtonKey = null;
+      },
       selectItinerary (key) {
+        this.clearActive();
+        this.activeButtonKey = key;
         this.selectedDates = key.split('_')
         this.dates = this.selectedDates
         this.betweenDates = this.getBetweenDates(this.dates)
@@ -511,9 +519,9 @@ import { jsPDF } from 'jspdf';
 }
 .itinerary {
   display: inline-flex;
-  padding: 10px;
-  background: greenyellow;
-  max-width: 300px;
+  // padding: 10px;
+  // // background: greenyellow;
+  // max-width: 300px;
   margin: 10px;
   justify-content: space-between;
   cursor: pointer;
@@ -536,5 +544,8 @@ import { jsPDF } from 'jspdf';
     margin-top: -5px;
     margin-left: -6.5px;
   }
+}
+.tab-bar {
+  width: 100%;
 }
 </style>
