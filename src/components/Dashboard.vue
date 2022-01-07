@@ -2,35 +2,27 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
-      <v-btn
-          class="ma-2"
-          :outlined="itin.key !== activeButtonKey"
-          v-for="(itin, index) in allItineraries"
-          color="primary"
-          :key="index"
-          @click="selectItinerary(itin.key)"
-        >
-          <!-- <h5>{{JSON.stringify(itin.active)}}</h5> -->
-          {{ itin.name || formatDates(itin.key.split('_'))}}
-        </v-btn>
+        <trips-buttons
+          :itineraries="allItineraries"
+          @button-select="selectItinerary"/>
+
         <h2> {{displayDates}} </h2>
-        <span v-if="this.selectedDates.length && this.sortedEvents.length">
-          <v-btn
-          @click="download"
-          class="export"
-          elevation="2" text>
-          Export PDF
-        </v-btn>
-        <v-btn @click="deleteItinerary">
-          Delete
-        </v-btn>
-        </span>
+
+      <download-buttons
+        v-if="this.selectedDates.length && this.sortedEvents.length"
+        :name="name"
+        :sorted-events="sortedEvents"
+        :between-dates="betweenDates"
+        :display-dates="displayDates"
+        @delete-itinerary="deleteItinerary"
+        />
       </v-col>
       <v-col cols="3" xs="1">
         <section v-if="viewDate">
           <form>
             <v-text-field v-model="viewDate.event.name" :counter="30" label="Activity Name" required></v-text-field>
-            <v-textarea v-model="viewDate.event.description" :counter="100" label="Activity Details"></v-textarea>
+            <v-textarea v-model="viewDate.event.description" :counter="200" label="Activity Details"></v-textarea>
+            <v-text-field v-model="viewDate.event.link" label="Activity Link"></v-text-field>
             <v-checkbox v-model="viewDate.event.highlight" label="Highlight"></v-checkbox>
             <v-btn class="mr-4" @click="saveEvent">
               Save
@@ -77,6 +69,7 @@
             :weekdays="weekday"
             :type="type"
             :start="day"
+            popover
             :events="(events[day] || {}).days"
             :event-overlap-mode="mode"
             :event-overlap-threshold="30"
@@ -95,7 +88,8 @@
                 class="v-current-time"
                 :class="{ first: date === week[0].date }"
                 :style="{ top: nowY }"
-              ></div>
+              >
+              </div>
             </template>
           </v-calendar>
             <v-menu
@@ -146,10 +140,14 @@
 </template>
 
 <script>
-import { jsPDF } from 'jspdf';
-
+import TripsButtons from './TripsButtons'
+import DownloadButtons from './DownloadButtons'
   export default {
     name: 'Dashboard',
+    components: {
+      TripsButtons,
+      DownloadButtons
+    },
     data: () => ({
       name: '',
       focus: '',
@@ -279,38 +277,6 @@ import { jsPDF } from 'jspdf';
         // nativeEvent.stopPropagation()
         this.showDate(event, index, nativeEvent);
       },
-      download () {
-        var doc = new jsPDF();
-
-        doc.setFontSize(30);
-        doc.text(`${this.name}`, 20, 30);
-        doc.setFontSize(16);
-        doc.text(`${this.displayDates}`, 20, 40);
-        let offset = 40;
-        let page = 1;
-
-        this.sortedEvents.filter(ev => ev).forEach((event, index) => {
-          if (offset >= page * 250) {
-            doc.addPage();
-            offset = 10;
-          }
-          doc.setFontSize(22);
-          doc.text(`${this.betweenDates[index].toDateString()}`, 20, 20 + offset);
-          event.forEach(activity => {
-            doc.setFontSize(16);
-            doc.text(new Date(activity.start).toLocaleTimeString(), 60, 30 + offset, {
-                align: 'right',
-            });
-            doc.text(activity.name, 70, 30 + offset);
-            doc.setFontSize(10);
-            if (activity.description) doc.text(activity.description, 70, 35 + offset);
-            offset += 15;
-          })
-          offset += 20;
-        });
-
-        doc.save(`${this.name} itinerary.pdf`);
-      },
       viewDay ({ date }) {
         this.focus = date
         this.type = 'day'
@@ -339,10 +305,13 @@ import { jsPDF } from 'jspdf';
         this.itineraries = localValue
       },
       saveEvents () {
-        this.itineraries[this.stringifiedDates] = {
-          name: this.name,
-          events: this.events
+        if (this.stringifiedDates) {
+          this.itineraries[this.stringifiedDates] = {
+            name: this.name,
+            events: this.events
+          }
         }
+
         localStorage.setItem('itinerator', JSON.stringify(this.itineraries))
         this.setItineraries()
       },
@@ -479,34 +448,6 @@ import { jsPDF } from 'jspdf';
         console.log('MAKING EVENTS', this.events)
         this.$emit('date-select', dates)
       },
-      // getEvents ({ start, end }) {
-      //   const one = 1
-      //   if (one == '1') return []
-      //   const events = []
-
-      //   const min = new Date(`${start.date}T10:00:00`)
-      //   const max = new Date(`${end.date}T13:59:59`)
-      //   const days = (max.getTime() - min.getTime()) / 86400000
-      //   const eventCount = this.rnd(days, days + 20)
-
-      //   for (let i = 0; i < eventCount; i++) {
-      //     const allDay = this.rnd(0, 3) === 0
-      //     const firstTimestamp = this.rnd(min.getTime(), max.getTime())
-      //     const first = new Date(firstTimestamp - (firstTimestamp % 900000))
-      //     const secondTimestamp = this.rnd(2, allDay ? 288 : 8) * 900000
-      //     const second = new Date(first.getTime() + secondTimestamp)
-
-      //     events.push({
-      //       name: this.names[this.rnd(0, this.names.length - 1)],
-      //       start: first,
-      //       end: second,
-      //       color: this.colors[this.rnd(0, this.colors.length - 1)],
-      //       timed: !allDay,
-      //     })
-      //   }
-
-      //   this.events = events
-      // },
       getEventColor (event) {
         return event.color
       },
@@ -514,11 +455,6 @@ import { jsPDF } from 'jspdf';
   }
 </script>
 <style scoped lang="scss">
-.export {
-  /* position: absolute;
-  left: 20px;
-  top: 20px; */
-}
 .cal-section {
   max-height: 400px;
 }
