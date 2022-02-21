@@ -142,6 +142,7 @@
 <script>
 import TripsButtons from './TripsButtons'
 import DownloadButtons from './DownloadButtons'
+import axios from 'axios'
   export default {
     name: 'Dashboard',
     components: {
@@ -309,6 +310,20 @@ import DownloadButtons from './DownloadButtons'
         const localValue = JSON.parse(localStorage.getItem('itinerator') || {})
         this.itineraries = localValue
       },
+      async postEvents () {
+        console.log('post save')
+        const itinerary = this.itineraries[this.activeButtonKey]
+        const serverRes = await axios.post(
+          'http://localhost:3000/users/save', {
+            itinerary,
+          },
+         {
+           headers: {
+            'Authorization': this.$cookies.get('itinerator-token')
+          }
+         })
+         console.log('save Itin', serverRes)
+      },
       saveEvents () {
         if (this.stringifiedDates) {
           this.itineraries[this.stringifiedDates] = {
@@ -317,7 +332,8 @@ import DownloadButtons from './DownloadButtons'
           }
         }
 
-        localStorage.setItem('itinerator', JSON.stringify(this.itineraries))
+        localStorage.setItem('itinerator', JSON.stringify(this.itineraries));
+        this.postEvents();
         this.setItineraries()
       },
       startDrag ({ event, timed }) {
