@@ -146,9 +146,10 @@ import DownloadButtons from './DownloadButtons'
     name: 'Dashboard',
     components: {
       TripsButtons,
-      DownloadButtons
+      DownloadButtons,
     },
     data: () => ({
+      user : {},
       name: '',
       focus: '',
       dates: [],
@@ -189,6 +190,10 @@ import DownloadButtons from './DownloadButtons'
         localStorage.setItem('itinerator-clear', 'true')
       }
       this.setItineraries()
+      this.$root.$on('login', (data) => {
+        this.user = data;
+        console.log('logged in data:', data)
+      })
     },
     computed: {
       sortedEvents () {

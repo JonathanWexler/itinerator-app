@@ -26,6 +26,7 @@
       </div>  
 
       <v-spacer></v-spacer>
+      <itinerator-google-login />
     </v-app-bar>
 
     <v-main>
@@ -36,12 +37,14 @@
 
 <script>
 import Dashboard from './components/Dashboard';
+import ItineratorGoogleLogin from './components/GoogleLogin'
 
 export default {
   name: 'App',
 
   components: {
     Dashboard,
+    ItineratorGoogleLogin
   },
 
   data: () => ({
