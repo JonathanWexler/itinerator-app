@@ -2,6 +2,7 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
+        <SaveStatus :last-saved="lastSaved"/>
         <trips-buttons
           :itineraries="allItineraries"
           @button-select="selectItinerary"/>
@@ -35,7 +36,7 @@
             </v-btn>
           </form>
         </section>
-        <section v-else>
+        <section class="activity-cal" v-else>
           <v-card fluid class="tab-bar" v-if="activeButtonKey">
             <v-tabs v-model="tab" background-color="primary accent-4" fixed-tabs center-active dark>
               <v-tabs-slider color="yellow"></v-tabs-slider>
@@ -140,16 +141,21 @@
 </template>
 
 <script>
-import TripsButtons from './TripsButtons'
-import DownloadButtons from './DownloadButtons'
-import axios from 'axios'
+// import FlashMessage from '@smartweb/vue-flash-message';
+import SaveStatus from './SaveStatus';
+import TripsButtons from './TripsButtons';
+import DownloadButtons from './DownloadButtons';
+import axios from 'axios';
+
   export default {
     name: 'Dashboard',
     components: {
       TripsButtons,
       DownloadButtons,
+      SaveStatus
     },
     data: () => ({
+      lastSaved: null,
       user : {},
       name: '',
       focus: '',
@@ -195,6 +201,11 @@ import axios from 'axios'
         this.user = data;
         console.log('logged in data:', data)
       })
+      // this.flashMessage.show({
+      //   status: 'error',
+      //   title: 'Error Message Title',
+      //   message: 'Oh, you broke my heart! Shame on you!'
+      // });
     },
     computed: {
       sortedEvents () {
@@ -509,5 +520,10 @@ import axios from 'axios'
 }
 .tab-bar {
   width: 100%;
+}
+
+.activity-cal {
+  position: fixed;
+  top: 150px;
 }
 </style>
