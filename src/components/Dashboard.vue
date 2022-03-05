@@ -23,6 +23,13 @@
           <form>
             <v-text-field v-model="viewDate.event.name" :counter="30" label="Activity Name" required></v-text-field>
             <v-textarea v-model="viewDate.event.description" :counter="200" label="Activity Details"></v-textarea>
+            <VueTimepicker format="HH:mm" v-model="selectedActivity.start"/>
+            <VueTimepicker format="HH:mm" v-model="selectedActivity.end"/>
+            <!-- <v-time-picker
+              v-model="viewDate.event.start"
+              :landscape="$vuetify.breakpoint.mdAndUp"
+              type="month"
+            ></v-time-picker> -->
             <v-text-field v-model="viewDate.event.link" label="Activity Link"></v-text-field>
             <v-checkbox v-model="viewDate.event.highlight" label="Highlight"></v-checkbox>
             <v-btn class="mr-4" @click="saveEvent">
@@ -47,8 +54,9 @@
           <v-date-picker v-if="tab === 0" ref="picker" dark show-adjacent-months range no-title v-model="dates" @change="emitDates">
           </v-date-picker>
           <section class='activities-card' v-else>
-            <v-card v-for="(activityEvent, index) in sortedEvents.flat()" :key="index"
-              :color="activityEvent.color">
+            <v-card class="list-activity" v-for="(activityEvent, index) in sortedEvents.flat()" :key="index"
+              :color="activityEvent.color"
+              @click="showDate(activityEvent, index)">
               <h1>{{activityEvent.name}}</h1>
               <h5>{{activityDateFormat(activityEvent.start)}}</h5>
             </v-card>
@@ -145,6 +153,7 @@
 import SaveStatus from './SaveStatus';
 import TripsButtons from './TripsButtons';
 import DownloadButtons from './DownloadButtons';
+import VueTimepicker from 'vue2-timepicker/src/vue-timepicker.vue'
 import axios from 'axios';
 
   export default {
@@ -152,9 +161,20 @@ import axios from 'axios';
     components: {
       TripsButtons,
       DownloadButtons,
-      SaveStatus
+      SaveStatus,
+      VueTimepicker
     },
     data: () => ({
+      selectedActivity: {
+        start: {
+          HH: '',
+          mm: '',
+        },
+        end: {
+          HH: '',
+          mm: '',
+        },
+      },
       saving: false,
       lastSaved: null,
       user : {},
@@ -244,9 +264,22 @@ import axios from 'axios';
         const day = date.toString().split(' ').slice(0,3).join(' ')
         return `${day} ${date.toLocaleTimeString()}`;
       },
+      updateEventTimes () {
+        console.log('here')
+        const {event} = this.viewDate
+        const start = new Date(event.start)
+        const end = new Date(event.end)
+        start.setHours(this.selectedActivity.start.HH)
+        start.setMinutes(this.selectedActivity.start.mm)
+        end.setHours(this.selectedActivity.end.HH)
+        end.setMinutes(this.selectedActivity.end.mm)
+        event.start = start
+        event.end = end
+      },
       saveEvent () {
         // const { event, index } = this.viewDate
         // this.events[index] = event
+        this.updateEventTimes()
         this.saveEvents()
         this.closeEvent()
       },
@@ -260,6 +293,16 @@ import axios from 'axios';
       },
       closeEvent () {
         this.viewDate = null;
+        this.selectedActivity = {
+          start: {
+            HH: '',
+            mm: '',
+          },
+          end: {
+            HH: '',
+            mm: '',
+          },
+        }
       },
 
       deleteEvent () {
@@ -269,6 +312,14 @@ import axios from 'axios';
         this.saveEvent()
       },
       showDate (event, index) {
+        const start = new Date(event.start)
+        const end = new Date(event.end)
+        console.log('start.getHours().toString()', start.getHours(), start.getHours().toString())
+        this.selectedActivity.start.HH = ("0" + start.getHours().toString()).slice(-2)
+        this.selectedActivity.start.mm = ("0" + start.getMinutes().toString()).slice(-2)
+        this.selectedActivity.end.HH = ("0" + end.getHours().toString()).slice(-2)
+        this.selectedActivity.end.mm = ("0" + end.getMinutes().toString()).slice(-2)
+
         this.viewDate = {
           event,
           index
@@ -334,18 +385,21 @@ import axios from 'axios';
          })
          this.saving = false;
          this.lastSaved = Date.now();
+         itinerary.id = serverRes.data.itinerary.id;
+         console.log('J', this.itineraries[this.activeButtonKey])
          console.log('save Itin', serverRes)
       },
-      saveEvents () {
+      async saveEvents () {
         if (this.stringifiedDates) {
           this.itineraries[this.stringifiedDates] = {
+            ...this.itineraries[this.stringifiedDates],
             name: this.name,
             events: this.events
           }
         }
         // TODO Save to DB
+        await this.postEvents();
         localStorage.setItem('itinerator', JSON.stringify(this.itineraries));
-        this.postEvents();
         this.setItineraries()
       },
       startDrag ({ event, timed }) {
@@ -524,11 +578,20 @@ import axios from 'axios';
 }
 
 .activity-cal {
+  width: 300px;
   position: fixed;
   top: 150px;
 }
 .activities-card {
   max-height: 500px;
   overflow-y:scroll;
+}
+
+.list-activity {
+  margin-bottom: 5px;
+  padding: 5px 0;
+  &:hover{
+    opacity: .8;
+  }
 }
 </style>
