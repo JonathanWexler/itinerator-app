@@ -2,7 +2,7 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
-        <SaveStatus :last-saved="lastSaved"/>
+        <SaveStatus :last-saved="lastSaved" :loading="saving"/>
         <trips-buttons
           :itineraries="allItineraries"
           @button-select="selectItinerary"/>
@@ -19,7 +19,7 @@
         />
       </v-col>
       <v-col cols="3" xs="1">
-        <section v-if="viewDate">
+        <section class="activity-cal" v-if="viewDate">
           <form>
             <v-text-field v-model="viewDate.event.name" :counter="30" label="Activity Name" required></v-text-field>
             <v-textarea v-model="viewDate.event.description" :counter="200" label="Activity Details"></v-textarea>
@@ -46,7 +46,7 @@
           </v-card>
           <v-date-picker v-if="tab === 0" ref="picker" dark show-adjacent-months range no-title v-model="dates" @change="emitDates">
           </v-date-picker>
-          <section v-else>
+          <section class='activities-card' v-else>
             <v-card v-for="(activityEvent, index) in sortedEvents.flat()" :key="index"
               :color="activityEvent.color">
               <h1>{{activityEvent.name}}</h1>
@@ -155,6 +155,7 @@ import axios from 'axios';
       SaveStatus
     },
     data: () => ({
+      saving: false,
       lastSaved: null,
       user : {},
       name: '',
@@ -192,6 +193,7 @@ import axios from 'axios';
       activeButtonKey: null
     }),
     mounted () {
+      // TODO: Fetch from DB
       if (localStorage.getItem('itinerator-clear') !== 'true') {
         localStorage.setItem('itinerator', '{}')
         localStorage.setItem('itinerator-clear', 'true')
@@ -201,11 +203,6 @@ import axios from 'axios';
         this.user = data;
         console.log('logged in data:', data)
       })
-      // this.flashMessage.show({
-      //   status: 'error',
-      //   title: 'Error Message Title',
-      //   message: 'Oh, you broke my heart! Shame on you!'
-      // });
     },
     computed: {
       sortedEvents () {
@@ -318,10 +315,12 @@ import axios from 'axios';
         this.name = name
       },
       setItineraries() {
+        // TODO: Fetch from DB? But not priority
         const localValue = JSON.parse(localStorage.getItem('itinerator') || {})
         this.itineraries = localValue
       },
       async postEvents () {
+        this.saving = true;
         console.log('post save')
         const itinerary = this.itineraries[this.activeButtonKey]
         const serverRes = await axios.post(
@@ -333,6 +332,8 @@ import axios from 'axios';
             'Authorization': this.$cookies.get('itinerator-token')
           }
          })
+         this.saving = false;
+         this.lastSaved = Date.now();
          console.log('save Itin', serverRes)
       },
       saveEvents () {
@@ -342,7 +343,7 @@ import axios from 'axios';
             events: this.events
           }
         }
-
+        // TODO Save to DB
         localStorage.setItem('itinerator', JSON.stringify(this.itineraries));
         this.postEvents();
         this.setItineraries()
@@ -525,5 +526,9 @@ import axios from 'axios';
 .activity-cal {
   position: fixed;
   top: 150px;
+}
+.activities-card {
+  max-height: 500px;
+  overflow-y:scroll;
 }
 </style>
