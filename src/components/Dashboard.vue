@@ -23,8 +23,14 @@
           <form>
             <v-text-field v-model="viewDate.event.name" :counter="30" label="Activity Name" required></v-text-field>
             <v-textarea v-model="viewDate.event.description" :counter="200" label="Activity Details"></v-textarea>
-            <VueTimepicker format="HH:mm" v-model="selectedActivity.start"/>
-            <VueTimepicker format="HH:mm" v-model="selectedActivity.end"/>
+            <section class="time-picker">
+              <div>
+                Start Time: <VueTimepicker format="HH:mm A" v-model="selectedActivity.start"/> <br/>
+              </div>
+              <div>
+                End Time: <VueTimepicker format="HH:mm A" v-model="selectedActivity.end"/>
+              </div>
+            </section>
             <!-- <v-time-picker
               v-model="viewDate.event.start"
               :landscape="$vuetify.breakpoint.mdAndUp"
@@ -593,5 +599,9 @@ import axios from 'axios';
   &:hover{
     opacity: .8;
   }
+}
+
+.time-picker {
+  display: flex;
 }
 </style>
