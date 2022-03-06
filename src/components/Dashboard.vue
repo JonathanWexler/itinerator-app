@@ -18,9 +18,9 @@
         @delete-itinerary="deleteItinerary"
         />
       </v-col>
-      <v-col cols="3" xs="1">
-        <section class="activity-cal" v-if="viewDate">
-          <form v-if="editActivityToggle">
+      <v-col class="left-col" cols="3" xs="1">
+        <section v-if="viewDate">
+          <form class="activity-edit" v-if="editActivityToggle">
             <v-text-field v-model="viewDate.event.name" :counter="30" label="Activity Name" required></v-text-field>
             <v-textarea v-model="viewDate.event.description" :counter="200" label="Activity Details"></v-textarea>
             <section class="time-picker">
@@ -31,7 +31,12 @@
                 End Time: <VueTimepicker format="HH:mm A" v-model="selectedActivity.end"/>
               </div>
             </section>
-            <v-text-field v-model="viewDate.event.link" label="Activity Link"></v-text-field>
+            <div v-for="(link, index) in viewDate.event.links" :key="index">
+              <v-text-field v-model="link.value" label="Activity Link"></v-text-field>
+            </div>
+            <button @click="addLink">
+              Add Link
+            </button>
             <v-checkbox v-model="viewDate.event.highlight" label="Highlight"></v-checkbox>
             <v-btn class="mr-4" @click="saveEvent">
               Save
@@ -44,14 +49,15 @@
             </v-btn>
           </form>
           <activity-card
+            class="activity-edit"
             v-else
             :name="viewDate.event.name"
             :description="viewDate.event.description"
             :start="viewDate.event.start"
             :end="viewDate.event.end"
-            :links="[viewDate.event.link]"
+            :links="viewDate.event.links"
             :highlight="viewDate.event.highlight"
-            :image-url="activityImage"
+            :image-url="viewDate.event.imageUrl || activityImage"
             @edit="toggleEdit(true)"
             @close="closeEvent"
           />
@@ -105,6 +111,14 @@
             @click:more="viewDay"
             @click:date="viewDay"
             >
+            <template v-slot:day="{ past, date }">
+              <v-row
+                class="fill-height"
+              >
+              {{past}}
+              {{date}}
+              </v-row>
+            </template>
             <template v-slot:day-body="{ date, week }">
               <div
                 class="v-current-time"
@@ -112,6 +126,21 @@
                 :style="{ top: nowY }"
               >
               </div>
+            </template>
+            <template v-slot:event="{ event, timed, eventSummary }">
+              <div
+                class="v-event-draggable"
+                v-html="eventSummary()"
+              ></div>
+                  <v-img
+                    class="activity-cal-image"
+                    :src="event.imageUrl"
+                  ></v-img>
+              <div
+                v-if="timed"
+                class="v-event-drag-bottom"
+                @mousedown.stop="extendBottom(event)"
+              ></div>
             </template>
           </v-calendar>
             <v-menu
@@ -182,6 +211,8 @@ import axios from 'axios';
     data: () => ({
       activityImage: null,
       editActivityToggle: false,
+      changedEventsSinceLastSaved: [],
+      changedSinceLastSaved: false,
       selectedActivity: {
         start: {
           HH: '',
@@ -276,6 +307,11 @@ import axios from 'axios';
       }
     },
     methods: {
+      addLink (event) {
+        event.preventDefault()
+        if (!this.viewDate.event.links) this.viewDate.event.links = []
+        this.viewDate.event.links.push({value: ''})
+      },
       toggleEdit (value) {
         this.editActivityToggle = !!value;
       },
@@ -382,8 +418,8 @@ import axios from 'axios';
         console.log('post save', this.viewDate, itinerary)
         const serverRes = await axios.post(
           'http://localhost:3000/users/save', {
-            itinerary,
-            link: (this.viewDate || {})?.event?.link
+            itineraries: this.itineraries,
+            link: (this.viewDate || {})?.event?.links
           },
          {
            headers: {
@@ -392,7 +428,7 @@ import axios from 'axios';
          })
          this.saving = false;
          this.lastSaved = Date.now();
-         itinerary.id = serverRes.data.itinerary.id;
+         this.itineraries = serverRes.data.itineraries;
          this.activityImage = serverRes.data.image;
          console.log('J', this.itineraries[this.activeButtonKey])
          console.log('save Itin', serverRes)
@@ -433,6 +469,7 @@ import axios from 'axios';
             start: this.createStart,
             end: this.createStart,
             timed: true,
+            links: []
           }
           this.events[this.betweenDates[index]].days.push(this.createEvent)
           // this.events.forEach((day, dayIndex) => {
@@ -585,10 +622,22 @@ import axios from 'axios';
   width: 100%;
 }
 
-.activity-cal {
-  width: 300px;
+.activity-edit {
+  width: 350px;
   position: fixed;
   top: 150px;
+  max-height: 550px;
+  overflow-y: auto;
+  padding-bottom: 5px;
+  padding-right: 15px;
+  margin-right: 15px;
+}
+
+.activity-cal {
+  width: 350px;
+  position: fixed;
+  top: 150px;
+  padding: 5px;
 }
 .activities-card {
   max-height: 500px;
@@ -605,5 +654,37 @@ import axios from 'axios';
 
 .time-picker {
   display: flex;
+}
+
+.v-event-drag-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  height: 4px;
+  cursor: ns-resize;
+
+  &::after {
+    display: none;
+    position: absolute;
+    left: 50%;
+    height: 4px;
+    border-top: 1px solid white;
+    border-bottom: 1px solid white;
+    width: 16px;
+    margin-left: -8px;
+    opacity: 0.8;
+    content: '';
+  }
+
+  &:hover::after {
+    display: block;
+  }
+}
+
+.activity-cal-image {
+  max-width: 150px;
+  position: absolute;
+  top: 0;
 }
 </style>

@@ -33,8 +33,10 @@
       <v-row
         align="center"
         class="mx-0"
+        v-for="(link, index) in links"
+        :key="index"
       >
-        <a :href="links">{{links}}</a>
+        <a :href="link.value">{{formatLinkLabel(link.value)}}</a>
       </v-row>
     </v-card-text>
 
@@ -97,6 +99,9 @@ export default {
   methods: {
     formatTime (date) {
       return `${date.getHours()}:${date.getMinutes()}`
+    },
+    formatLinkLabel(link) {
+      return link.split('.')[1]
     }
   },
   computed: {
