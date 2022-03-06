@@ -1,6 +1,6 @@
 <template>
   <div class="SaveStatus">
-    <pulse-loader v-if="loading" :loading="loading" color="blue" width="300" height="100"></pulse-loader>
+    <pulse-loader v-if="loading" :loading="loading" color="#1976d2" width="300" height="100"></pulse-loader>
     <span v-else>{{saveMesaage}}</span>
   </div>
 </template>
@@ -55,8 +55,8 @@ export default {
   align-items: center;
   width: 100px;
   height: 50px;
-  position: absolute;
-  right: 40px;
+  position: fixed;
+  right: 20px;
   color: lightgray;
   border: 1px solid lightgray;
 }
