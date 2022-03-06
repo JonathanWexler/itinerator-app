@@ -1,6 +1,5 @@
 <template>
   <div class="download-buttons">
-    <h1>Hello there</h1>
     <span >
       <v-btn @click="download" class="export" elevation="2" text>
         Export PDF
