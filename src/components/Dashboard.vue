@@ -416,8 +416,10 @@ import axios from 'axios';
         this.saving = true;
         const itinerary = this.itineraries[this.activeButtonKey]
         console.log('post save', this.viewDate, itinerary)
+        const URI = 'https://itinerator-api.herokuapp.com/'
+        // const devURI = 'http://localhost:3000'
         const serverRes = await axios.post(
-          'http://localhost:3000/users/save', {
+          `${URI}/users/save`, {
             itineraries: this.itineraries,
             link: (this.viewDate || {})?.event?.links
           },
