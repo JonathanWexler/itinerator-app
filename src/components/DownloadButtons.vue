@@ -53,8 +53,9 @@ export default {
           doc.setFontSize(22);
           doc.text(`${this.betweenDates[index].toDateString()}`, 20, 20 + offset);
           event.forEach(activity => {
+            const time = new Date(activity.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             doc.setFontSize(16);
-            doc.text(new Date(activity.start).toLocaleTimeString(), 60, 30 + offset, {
+            doc.text(time, 60, 30 + offset, {
                 align: 'right',
             });
             doc.text(activity.name, 70, 30 + offset);

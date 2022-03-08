@@ -31,6 +31,9 @@
                 End Time: <VueTimepicker format="HH:mm A" v-model="selectedActivity.end"/>
               </div>
             </section>
+            <div class="time-edit-message">
+              {{timeEditMessage}}
+            </div>
             <div v-for="(link, index) in viewDate.event.links" :key="index">
               <v-text-field v-model="link.value" label="Activity Link"></v-text-field>
             </div>
@@ -38,7 +41,7 @@
               Add Link
             </button>
             <v-checkbox v-model="viewDate.event.highlight" label="Highlight"></v-checkbox>
-            <v-btn class="mr-4" @click="saveEvent">
+            <v-btn class="mr-4" :disabled="timeEditMessage" @click="saveEvent">
               Save
             </v-btn>
             <v-btn @click="toggleEdit(false)">
@@ -121,7 +124,7 @@
             </template>
             <template v-slot:day-body="{ date, week }">
               <div
-                class="v-current-time"
+                class="v-current-time activity-on-cal"
                 :class="{ first: date === week[0].date }"
                 :style="{ top: nowY }"
               >
@@ -273,6 +276,15 @@ import axios from 'axios';
       })
     },
     computed: {
+      timeEditMessage () {
+        let message = null
+        if ((this.selectedActivity.start.HH > this.selectedActivity.end.HH) ||
+          (this.selectedActivity.start.HH === this.selectedActivity.end.HH && 
+          (this.selectedActivity.start.mm > this.selectedActivity.end.mm))) {
+            message = 'Please update your time interval.'
+          }
+        return message
+      },
       sortedEvents () {
         if (!Object.keys(this.events).length) return []
         return this.betweenDates.map(d => this.events[d].days)
@@ -631,22 +643,24 @@ import axios from 'axios';
   max-height: 550px;
   overflow-y: auto;
   padding-bottom: 5px;
-  padding-right: 15px;
+  // padding-right: 15px;
   margin-right: 15px;
 }
 
 .activity-cal {
-  width: 350px;
+  width: 300px;
   position: fixed;
   top: 150px;
   padding: 5px;
 }
 .activities-card {
+  width: 300px;
   max-height: 500px;
   overflow-y:scroll;
 }
 
 .list-activity {
+  width: 300px;
   margin-bottom: 5px;
   padding: 5px 0;
   &:hover{
@@ -688,5 +702,12 @@ import axios from 'axios';
   max-width: 150px;
   position: absolute;
   top: 0;
+}
+
+.time-edit-message {
+  color: rgba(150, 5, 5, 0.747);
+}
+.activity-on-cal {
+  border: 1px solid yellow;
 }
 </style>
