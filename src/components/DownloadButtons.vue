@@ -53,15 +53,28 @@ export default {
           doc.setFontSize(22);
           doc.text(`${this.betweenDates[index].toDateString()}`, 20, 20 + offset);
           event.forEach(activity => {
-            const time = new Date(activity.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            const startTime = new Date(activity.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            const endTime = new Date(activity.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             doc.setFontSize(16);
-            doc.text(time, 60, 30 + offset, {
+            doc.text(`${startTime} - ${endTime}`, 80, 30 + offset, {
                 align: 'right',
             });
-            doc.text(activity.name, 70, 30 + offset);
+            doc.text(activity.name, 90, 30 + offset);
             doc.setFontSize(10);
-            if (activity.description) doc.text(activity.description, 70, 35 + offset);
-            offset += 15;
+            let buffer = 5;
+            const lineLength = 70;
+            if (activity.description) {
+              let description = activity.description
+              while (description.length > lineLength) {
+                let line = description.slice(0, lineLength);
+                if (![line[line.length-1], description.slice(lineLength, lineLength + 1)].includes(' ')) line += '-'
+                doc.text(line , 90, 30 + buffer + offset);
+                description = description.slice(lineLength)
+                buffer += 5;
+              }
+              doc.text(description, 90, 30 + buffer + offset);
+            }
+            offset += (15 + buffer);
           })
           offset += 20;
         });

@@ -401,7 +401,7 @@ import axios from 'axios';
         this.type = 'day'
       },
       formatDates ([first, second]) {
-        const [date1, date2] = [new Date(first), new Date(second)]
+        const [date1, date2] = [new Date(first + ' GMT-0400'), new Date(second + ' GMT-0400')]
         if (!first && !second) return 'Select Dates'
         else if (!second || first == second) return date1.toDateString()
         return `${date1.toDateString()} to ${date2.toDateString()}`
