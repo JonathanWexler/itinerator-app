@@ -2,7 +2,7 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
-        <SaveStatus :last-saved="lastSaved" :loading="saving"/>
+        <SaveStatus :last-saved="lastSaved" :loading="saving" :offline="!online"/>
         <trips-buttons
           :itineraries="allItineraries"
           @button-select="selectItinerary"/>
@@ -73,8 +73,12 @@
               <v-tab>Activities</v-tab>
             </v-tabs>
           </v-card>
-          <v-date-picker v-if="tab === 0" ref="picker" dark show-adjacent-months range no-title v-model="dates" @change="emitDates">
-          </v-date-picker>
+          <section v-if="tab === 0">
+            <v-date-picker  :disabled="disabledModifyDateCheckbox && hasDates" ref="picker" dark show-adjacent-months range no-title v-model="dates" @change="emitDates">
+            </v-date-picker>
+            <v-btn class="modify-cal-button" v-if="activeButtonKey && disabledModifyDateCheckbox" @click="disabledModifyDateCheckbox = !disabledModifyDateCheckbox" color="secondary">Modify Calendar</v-btn>
+            <v-btn class="modify-cal-button" v-if="activeButtonKey && !disabledModifyDateCheckbox" @click="saveModifiedDates" color="success">Save New Dates</v-btn>
+          </section>
           <section class='activities-card' v-else>
             <v-card class="list-activity" v-for="(activityEvent, index) in sortedEvents.flat()" :key="index"
               :color="activityEvent.color"
@@ -212,6 +216,9 @@ import axios from 'axios';
       ActivityCard
     },
     data: () => ({
+      online: true,
+      disabledModifyDateCheckbox: false,
+      authorization: null,
       activityImage: null,
       editActivityToggle: false,
       changedEventsSinceLastSaved: [],
@@ -265,6 +272,8 @@ import axios from 'axios';
     }),
     async mounted () {
       // TODO: Fetch from DB
+      this.online = this.networkConnected()
+      this.authorization = this.$cookies.get('itinerator-token')
       if (localStorage.getItem('itinerator-clear') !== 'true') {
         localStorage.setItem('itinerator', '{}')
         localStorage.setItem('itinerator-clear', 'true')
@@ -274,8 +283,12 @@ import axios from 'axios';
         this.user = data;
         console.log('logged in data:', data)
       })
+      if (this.online) await this.getEvents()
     },
     computed: {
+      hasDates () {
+        return !!this.displayDates;
+      },
       timeEditMessage () {
         let message = null
         if ((this.selectedActivity.start.HH > this.selectedActivity.end.HH) ||
@@ -319,6 +332,28 @@ import axios from 'axios';
       }
     },
     methods: {
+      async saveModifiedDates () {
+        this.disabledModifyDateCheckbox = !this.disabledModifyDateCheckbox
+        const tempActiveButtonKey= this.activeButtonKey
+        const {events} = this.itineraries[tempActiveButtonKey]
+        if (this.dates.length < 2) this.dates.push(this.dates[0])
+        const newActiveButtonKey = this.stringifiedDates
+        Object.keys(events).forEach(key => {
+          if (this.events[key]) {
+            console.log('HAS', key, events[key])
+            this.events[key] = events[key]
+          }
+        })
+        await this.saveEvents()
+        if (tempActiveButtonKey !== newActiveButtonKey) {
+          await this.deleteItinerary()
+        }
+        console.log('SAVED', this.itineraries)
+        console.log('NEW', newActiveButtonKey)
+        this.selectItinerary(newActiveButtonKey)
+
+
+      },
       addLink (event) {
         event.preventDefault()
         if (!this.viewDate.event.links) this.viewDate.event.links = []
@@ -352,13 +387,14 @@ import axios from 'axios';
         this.toggleEdit(false)
         // this.closeEvent()
       },
-      deleteItinerary () {
-        delete this.itineraries[this.stringifiedDates]
+      async deleteItinerary () {
+        delete this.itineraries[this.activeButtonKey]
         this.selectedDates = []
         this.dates = []
         this.betweenDates = []
         this.name = null
-        this.saveEvents()
+        this.activeButtonKey = null
+        await this.saveEvents()
       },
       closeEvent () {
         this.viewDate = null;
@@ -401,7 +437,7 @@ import axios from 'axios';
         this.type = 'day'
       },
       formatDates ([first, second]) {
-        const [date1, date2] = [new Date(first + ' GMT-0400'), new Date(second + ' GMT-0400')]
+        const [date1, date2] = [new Date(first + ' GMT-0500'), new Date(second + ' GMT-0500')]
         if (!first && !second) return 'Select Dates'
         else if (!second || first == second) return date1.toDateString()
         return `${date1.toDateString()} to ${date2.toDateString()}`
@@ -418,13 +454,32 @@ import axios from 'axios';
         const { events, name } = this.itineraries[key]
         this.events = events
         this.name = name
+        if (this.hasDates) this.disabledModifyDateCheckbox = true
       },
       setItineraries() {
         // TODO: Fetch from DB? But not priority
         const localValue = JSON.parse(localStorage.getItem('itinerator') || {})
         this.itineraries = localValue
       },
+      async getEvents () {
+        // const URI = 'https://itinerator-api.herokuapp.com'
+        const URI = 'http://localhost:3000'
+        const serverRes = await axios.get(
+          `${URI}/users/fetch`,
+            {
+           headers: {
+            'Authorization': this.authorization
+          }
+        });
+        console.log('serverRes', serverRes)
+      },
+      networkConnected () {
+        return navigator.onLine
+      },
       async postEvents () {
+        this.online = this.networkConnected()
+        if (!this.online) return
+
         this.saving = true;
         const itinerary = this.itineraries[this.activeButtonKey]
         console.log('post save', this.viewDate, itinerary)
@@ -437,7 +492,7 @@ import axios from 'axios';
           },
          {
            headers: {
-            'Authorization': this.$cookies.get('itinerator-token')
+            'Authorization': this.authorization
           }
          })
          this.saving = false;
@@ -456,7 +511,7 @@ import axios from 'axios';
           }
         }
         // TODO Save to DB
-        await this.postEvents();
+        // await this.postEvents();
         localStorage.setItem('itinerator', JSON.stringify(this.itineraries));
         this.setItineraries()
       },
@@ -709,5 +764,8 @@ import axios from 'axios';
 }
 .activity-on-cal {
   border: 1px solid yellow;
+}
+.modify-cal-button {
+  margin-top: 10px;
 }
 </style>

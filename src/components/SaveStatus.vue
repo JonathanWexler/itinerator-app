@@ -16,6 +16,10 @@ export default {
     PulseLoader
   },
   props: {
+    offline: {
+      type: Boolean,
+      default: false
+    },
     lastSaved: {
       type: Number,
       default: null
@@ -41,6 +45,9 @@ export default {
       if (this.lastSaved && this.updated) {
         const formatted = timeAgo.format(this.lastSaved)
         return `Saved ${formatted}`
+      }
+      if (this.offline) {
+        return 'Offline'
       }
       return this.message;
     }
