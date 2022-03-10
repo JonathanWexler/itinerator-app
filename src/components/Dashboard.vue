@@ -462,8 +462,8 @@ import axios from 'axios';
         this.itineraries = localValue
       },
       async getEvents () {
-        // const URI = 'https://itinerator-api.herokuapp.com'
-        const URI = 'http://localhost:3000'
+        const URI = 'https://itinerator-api.herokuapp.com'
+        // const URI = 'http://localhost:3000'
         const serverRes = await axios.get(
           `${URI}/users/fetch`,
             {
@@ -478,7 +478,7 @@ import axios from 'axios';
       },
       async postEvents () {
         this.online = this.networkConnected()
-        if (!this.online) return
+        if (!this.online || !this.authorization) return
 
         this.saving = true;
         const itinerary = this.itineraries[this.activeButtonKey]
@@ -511,7 +511,7 @@ import axios from 'axios';
           }
         }
         // TODO Save to DB
-        // await this.postEvents();
+        await this.postEvents();
         localStorage.setItem('itinerator', JSON.stringify(this.itineraries));
         this.setItineraries()
       },
