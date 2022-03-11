@@ -105,7 +105,7 @@
             :type="type"
             :start="day"
             popover
-            :events="(events[day] || {}).days"
+            :events="(events[day] || {}).activities"
             :event-overlap-mode="mode"
             :event-overlap-threshold="30"
             :event-color="getEventColor"
@@ -283,7 +283,7 @@ import axios from 'axios';
         this.user = data;
         console.log('logged in data:', data)
       })
-      if (this.online) await this.getEvents()
+      // if (this.online) await this.getEvents()
     },
     computed: {
       hasDates () {
@@ -300,7 +300,9 @@ import axios from 'axios';
       },
       sortedEvents () {
         if (!Object.keys(this.events).length) return []
-        return this.betweenDates.map(d => this.events[d].days)
+        return this.betweenDates.map(d => {
+          return this.events[d].activities.sort((a, b) => { return a.start - b.start})
+        })
       },
       betweenDatesMap () {
         return this.betweenDates.map(d => d.toISOString().split('T')[0])
@@ -340,16 +342,14 @@ import axios from 'axios';
         const newActiveButtonKey = this.stringifiedDates
         Object.keys(events).forEach(key => {
           if (this.events[key]) {
-            console.log('HAS', key, events[key])
             this.events[key] = events[key]
           }
         })
         await this.saveEvents()
+        console.log('itineraries so far', this.itineraries)
         if (tempActiveButtonKey !== newActiveButtonKey) {
           await this.deleteItinerary()
         }
-        console.log('SAVED', this.itineraries)
-        console.log('NEW', newActiveButtonKey)
         this.selectItinerary(newActiveButtonKey)
 
 
@@ -390,10 +390,11 @@ import axios from 'axios';
       async deleteItinerary () {
         delete this.itineraries[this.activeButtonKey]
         this.selectedDates = []
+        this.disabledModifyDateCheckbox = false;
         this.dates = []
         this.betweenDates = []
         this.name = null
-        this.activeButtonKey = null
+        // this.activeButtonKey = null
         await this.saveEvents()
       },
       closeEvent () {
@@ -412,8 +413,8 @@ import axios from 'axios';
 
       deleteEvent () {
         const { index, event } = this.viewDate
-        const activityIndex = this.events[this.betweenDates[index]].days.indexOf(event)
-        this.events[this.betweenDates[index]].days.splice(activityIndex, 1)
+        const activityIndex = this.events[this.betweenDates[index]].activities.indexOf(event)
+        this.events[this.betweenDates[index]].activities.splice(activityIndex, 1)
         this.saveEvent()
       },
       showDate (event, index) {
@@ -446,20 +447,37 @@ import axios from 'axios';
         this.activeButtonKey = null;
       },
       selectItinerary (key) {
+        if (!key) return;
         this.clearActive();
         this.activeButtonKey = key;
-        this.selectedDates = key.split('_')
+        this.selectedDates = this.activeButtonKey.split('_')
         this.dates = this.selectedDates
         this.betweenDates = this.getBetweenDates(this.dates)
-        const { events, name } = this.itineraries[key]
+        console.log('GOT KEY', key, this.itineraries[this.activeButtonKey])
+        const { events, name } = this.itineraries[this.activeButtonKey]
         this.events = events
         this.name = name
         if (this.hasDates) this.disabledModifyDateCheckbox = true
       },
+      changeDaysToActivities (itineraries) {
+        if (!itineraries || Object.keys(itineraries).length === 0) return {}
+        Object.keys(itineraries).forEach(itinkey => {
+          const itinerary = itineraries[itinkey]
+          Object.keys(itinerary.events).forEach(eventKey => {
+            const event = itinerary.events[eventKey]
+            if (event.days) {
+              event.activities = event.days
+              event.days = null
+            }
+          })
+        })
+        return itineraries;
+      },
       setItineraries() {
         // TODO: Fetch from DB? But not priority
-        const localValue = JSON.parse(localStorage.getItem('itinerator') || {})
-        this.itineraries = localValue
+        let local = localStorage.getItem('itinerator') || '{}'
+        const localValue = JSON.parse(local)
+        this.itineraries = this.changeDaysToActivities(localValue)
       },
       async getEvents () {
         const URI = 'https://itinerator-api.herokuapp.com'
@@ -483,8 +501,8 @@ import axios from 'axios';
         this.saving = true;
         const itinerary = this.itineraries[this.activeButtonKey]
         console.log('post save', this.viewDate, itinerary)
-        const URI = 'https://itinerator-api.herokuapp.com'
-        // const URI = 'http://localhost:3000'
+        // const URI = 'https://itinerator-api.herokuapp.com'
+        const URI = 'http://localhost:3000'
         const serverRes = await axios.post(
           `${URI}/users/save`, {
             itineraries: this.itineraries,
@@ -513,6 +531,7 @@ import axios from 'axios';
         // TODO Save to DB
         await this.postEvents();
         localStorage.setItem('itinerator', JSON.stringify(this.itineraries));
+        this.selectItinerary(this.stringifiedDates)
         this.setItineraries()
       },
       startDrag ({ event, timed }) {
@@ -533,14 +552,14 @@ import axios from 'axios';
         } else {
           this.createStart = this.roundTime(mouse)
           this.createEvent = {
-            name: `Activity #${this.events[this.betweenDates[index]].days.length + 1}`,
+            name: `Activity #${this.events[this.betweenDates[index]].activities.length + 1}`,
             color: this.rndElement(this.colors),
             start: this.createStart,
             end: this.createStart,
             timed: true,
             links: []
           }
-          this.events[this.betweenDates[index]].days.push(this.createEvent)
+          this.events[this.betweenDates[index]].activities.push(this.createEvent)
           // this.events.forEach((day, dayIndex) => {
           //   if (index !== dayIndex) day.pop()
           // })
@@ -588,9 +607,9 @@ import axios from 'axios';
           if (this.extendOriginal) {
             this.createEvent.end = this.extendOriginal
           } else {
-            const i =  this.events[this.betweenDates[index]].days.indexOf(this.createEvent)
+            const i =  this.events[this.betweenDates[index]].activities.indexOf(this.createEvent)
             if (i !== -1) {
-              this.events[this.betweenDates[index]].days.splice(i, 1)
+              this.events[this.betweenDates[index]].activities.splice(i, 1)
             }
           }
         }
@@ -643,7 +662,7 @@ import axios from 'axios';
         this.selectedDates = dates
         this.betweenDates = this.getBetweenDates(dates)
         this.events = this.betweenDates.reduce((accum, date) => {
-          accum[date] = { days: [] }
+          accum[date] = { activities: [] }
           return accum
         }, {});
         console.log('MAKING EVENTS', this.events)
