@@ -494,15 +494,22 @@ import axios from 'axios';
       networkConnected () {
         return navigator.onLine
       },
+      clearAuthorization () {
+        this.$cookies.remove('itinerator-token')
+        this.authorization = null;
+      },
       async postEvents () {
+        console.log('Posting events', this.networkConnected(), this.authorization)
         this.online = this.networkConnected()
-        if (!this.online || !this.authorization) return
-
+        if (!this.online || !this.authorization) {
+          console.log('Not online, no authorization');
+        }
+        console.log('saving')
         this.saving = true;
         const itinerary = this.itineraries[this.activeButtonKey]
         console.log('post save', this.viewDate, itinerary)
-        const URI = 'https://itinerator-api.herokuapp.com'
-        // const URI = 'http://localhost:3000'
+        // const URI = 'https://itinerator-api.herokuapp.com'
+        const URI = 'http://localhost:3000'
         const serverRes = await axios.post(
           `${URI}/users/save`, {
             itineraries: this.itineraries,
@@ -512,7 +519,12 @@ import axios from 'axios';
            headers: {
             'Authorization': this.authorization
           }
-         })
+         });
+         if (serverRes.status === 401) {
+          this.clearAuthorization();
+          return;
+         }
+         if (serverRes.data) alert('saved')
          this.saving = false;
          this.lastSaved = Date.now();
          this.itineraries = serverRes.data.itineraries;
