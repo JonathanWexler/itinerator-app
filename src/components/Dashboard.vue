@@ -507,12 +507,16 @@ import axios from 'axios';
         console.log('saving')
         this.saving = true;
         const itinerary = this.itineraries[this.activeButtonKey]
-        console.log('post save', this.viewDate, itinerary)
-        // const URI = 'https://itinerator-api.herokuapp.com'
-        const URI = 'http://localhost:3000'
+        console.log('post save', this.viewDate, itinerary);
+        const itineraries = this.itineraries;
+        let URI = 'https://itinerator-api.herokuapp.com';
+        if (process.env.NODE_ENV === 'development') {
+          URI = 'http://localhost:3000'
+        }
+        console.log('ENV', ); 
         const serverRes = await axios.post(
           `${URI}/users/save`, {
-            itineraries: this.itineraries,
+            itineraries,
             link: (this.viewDate || {})?.event?.links
           },
          {
@@ -524,7 +528,6 @@ import axios from 'axios';
           this.clearAuthorization();
           return;
          }
-         if (serverRes.data) alert('saved')
          this.saving = false;
          this.lastSaved = Date.now();
          this.itineraries = serverRes.data.itineraries;

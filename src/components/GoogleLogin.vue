@@ -77,9 +77,11 @@ export default {
     },
     async serverConfirm(authObject) {
       const {profile, auth} = authObject;
-      // const {userID, accessToken, refreshToken} = authObject.authResponse;  
-      const URI = `https://itinerator-api.herokuapp.com`
-      // const devURI = `http://localhost:3000`   
+      // const {userID, accessToken, refreshToken} = authObject.authResponse;   
+      let URI = 'https://itinerator-api.herokuapp.com';
+      if (process.env.NODE_ENV === 'development') {
+        URI = 'http://localhost:3000'
+      }
       const serverRes = await axios.post(
         `${URI}/auth/google`, {
           token: auth.id_token,
