@@ -19,16 +19,13 @@
       itineraries: {
         type: Array,
         default: () => []
+      },
+      selected: {
+        type: String
       }
-    },
-    data() {
-      return {
-        selected: null
-      };
     },
     methods: {
       selectItinerary(key) {
-        this.selected = key;
         this.$emit("button-select", key);
       },
       formatDates([first, second]) {

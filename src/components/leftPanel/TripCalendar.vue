@@ -21,7 +21,7 @@
     <v-btn
       class="modify-cal-button"
       v-if="activeButtonKey && !disabledModifyDateCheckbox"
-      @click="$emit('save-modified-dates', $event)"
+      @click="$emit('save-modified-dates', dates)"
       color="success"
       >Save New Dates</v-btn
     >
@@ -31,12 +31,24 @@
 <script>
   export default {
     name: "TripCalendar",
+    watch: {
+      selectedDates(newValue, oldValue) {
+        console.log("CHECKING change");
+        if (newValue && newValue !== oldValue) {
+          console.log("TAKING change", newValue, oldValue);
+          this.dates = this.selectedDates.split(",");
+        }
+      }
+    },
     data() {
       return {
         dates: null
       };
     },
     props: {
+      selectedDates: {
+        type: String
+      },
       disabledModifyDateCheckbox: {
         type: Boolean,
         default: false

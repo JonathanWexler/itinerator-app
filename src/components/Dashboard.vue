@@ -9,6 +9,7 @@
         />
         <trips-buttons
           :itineraries="allItineraries"
+          :selected="activeButtonKey"
           @button-select="selectItinerary"
         />
 
@@ -95,12 +96,13 @@
           />
         </section>
         <section class="activity-cal" v-else>
-          <tab-bar @tab-click="updateTab" />
+          <tab-bar v-if="activeButtonKey" @tab-click="updateTab" />
           <trip-calendar
             v-if="tab === 0"
             @disable-modify-date="disableModifyDate"
             @emit-dates="emitDates"
             @save-modified-dates="saveModifiedDates"
+            :selected-dates="selectedDates.join(',')"
             :active-button-key="activeButtonKey"
             :has-dates="hasDates"
             :disabled-modify-date-checkbox="disabledModifyDateCheckbox"
@@ -317,7 +319,7 @@
     },
     computed: {
       hasDates() {
-        return !!this.displayDates;
+        return this.selectedDates.length > 0 && !!this.displayDates;
       },
       timeEditMessage() {
         let message = null;
@@ -387,8 +389,9 @@
         });
         await this.saveEvents();
         console.log("itineraries so far", this.itineraries);
+
         if (tempActiveButtonKey !== newActiveButtonKey) {
-          await this.deleteItinerary();
+          await this.deleteItinerary(tempActiveButtonKey);
         }
         this.selectItinerary(newActiveButtonKey);
       },
@@ -420,14 +423,14 @@
         this.toggleEdit(false);
         // this.closeEvent()
       },
-      async deleteItinerary() {
-        delete this.itineraries[this.activeButtonKey];
+      async deleteItinerary(targetKey) {
+        const key = targetKey || this.activeButtonKey;
+        delete this.itineraries[key];
         this.selectedDates = [];
         this.disabledModifyDateCheckbox = false;
         this.dates = [];
         this.betweenDates = [];
         this.name = null;
-        // this.activeButtonKey = null
         await this.saveEvents();
       },
       closeEvent() {
@@ -555,11 +558,11 @@
         if (!this.online || !this.authorization) {
           console.log("Not online, no authorization");
         }
-        console.log("saving");
         this.saving = true;
         const itinerary = this.itineraries[this.activeButtonKey];
         console.log("post save", this.viewDate, itinerary);
         const itineraries = this.itineraries;
+        console.log("itineraries check", this.itineraries);
         let URI = "https://itinerator-api.herokuapp.com";
         if (process.env.NODE_ENV === "development") {
           URI = "http://localhost:3000";
@@ -596,7 +599,6 @@
             events: this.events
           };
         }
-        // TODO Save to DB
         await this.postEvents();
         localStorage.setItem("itinerator", JSON.stringify(this.itineraries));
         this.selectItinerary(this.stringifiedDates);
@@ -745,7 +747,7 @@
           return accum;
         }, {});
         console.log("MAKING EVENTS", this.events);
-        this.$emit("date-select", dates);
+        this.dates = dates;
       },
       getEventColor(event) {
         return event.color;
