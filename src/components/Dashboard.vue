@@ -96,46 +96,20 @@
         </section>
         <section class="activity-cal" v-else>
           <tab-bar @tab-click="updateTab" />
-
-          <section v-if="tab === 0">
-            <v-date-picker
-              :disabled="disabledModifyDateCheckbox && hasDates"
-              ref="picker"
-              dark
-              show-adjacent-months
-              range
-              no-title
-              v-model="dates"
-              @change="emitDates"
-            >
-            </v-date-picker>
-            <v-btn
-              class="modify-cal-button"
-              v-if="activeButtonKey && disabledModifyDateCheckbox"
-              @click="disabledModifyDateCheckbox = !disabledModifyDateCheckbox"
-              color="secondary"
-              >Modify Calendar</v-btn
-            >
-            <v-btn
-              class="modify-cal-button"
-              v-if="activeButtonKey && !disabledModifyDateCheckbox"
-              @click="saveModifiedDates"
-              color="success"
-              >Save New Dates</v-btn
-            >
-          </section>
-          <section class="activities-card" v-else>
-            <v-card
-              class="list-activity"
-              v-for="(activityEvent, index) in sortedEvents.flat()"
-              :key="index"
-              :color="activityEvent.color"
-              @click="showEvent({ event: activityEvent }, index)"
-            >
-              <h1>{{ activityEvent.name }}</h1>
-              <h5>{{ activityDateFormat(activityEvent.start) }}</h5>
-            </v-card>
-          </section>
+          <trip-calendar
+            v-if="tab === 0"
+            @disable-modify-date="disableModifyDate"
+            @emit-dates="emitDates"
+            @save-modified-dates="saveModifiedDates"
+            :active-button-key="activeButtonKey"
+            :has-dates="hasDates"
+            :disabled-modify-date-checkbox="disabledModifyDateCheckbox"
+          />
+          <activity-panel
+            v-else
+            @show-event="showEvent"
+            :activities="sortedEvents.flat()"
+          />
         </section>
       </v-col>
       <v-col cols="8" offset-md="1" xs="12">
@@ -232,6 +206,8 @@
   // import FlashMessage from '@smartweb/vue-flash-message';
   import ActivityCard from "./ActivityCard";
   import TabBar from "./leftPanel/TabBar";
+  import TripCalendar from "./leftPanel/TripCalendar";
+  import ActivityPanel from "./leftPanel/ActivityPanel";
   import SaveStatus from "./SaveStatus";
   import TripsButtons from "./TripsButtons";
   import DownloadButtons from "./DownloadButtons";
@@ -241,8 +217,10 @@
   export default {
     name: "Dashboard",
     components: {
+      ActivityPanel,
       TripsButtons,
       TabBar,
+      TripCalendar,
       DownloadButtons,
       SaveStatus,
       VueTimepicker,
@@ -390,6 +368,9 @@
       }
     },
     methods: {
+      disableModifyDate(value) {
+        this.disabledModifyDateCheckbox = value;
+      },
       updateTab(tab) {
         this.tab = tab;
       },
@@ -418,15 +399,6 @@
       },
       toggleEdit(value) {
         this.editActivityToggle = !!value;
-      },
-      activityDateFormat(time) {
-        const date = new Date(time);
-        const day = date
-          .toString()
-          .split(" ")
-          .slice(0, 3)
-          .join(" ");
-        return `${day} ${date.toLocaleTimeString()}`;
       },
       updateEventTimes() {
         const { event } = this.viewDate;
@@ -504,7 +476,7 @@
           index
         };
       },
-      showEvent({ nativeEvent, event }, index) {
+      showEvent({ nativeEvent, event, index }) {
         this.showDate(event, index, nativeEvent);
       },
       viewDay({ date }) {
@@ -887,8 +859,5 @@
   }
   .activity-on-cal {
     border: 1px solid yellow;
-  }
-  .modify-cal-button {
-    margin-top: 10px;
   }
 </style>
