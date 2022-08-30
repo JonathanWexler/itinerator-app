@@ -22,7 +22,7 @@
       displayDates: {
         type: String
       },
-      sortedEvents: {
+      sortedActivities: {
         type: Array,
         default: () => []
       },
@@ -45,9 +45,9 @@
         let offset = 40;
         let page = 1;
 
-        this.sortedEvents
+        this.sortedActivities
           .filter(ev => ev)
-          .forEach((event, index) => {
+          .forEach((activityArray, index) => {
             if (offset >= page * 250) {
               doc.addPage();
               offset = 10;
@@ -58,7 +58,7 @@
               20,
               20 + offset
             );
-            event.forEach(activity => {
+            activityArray.forEach(activity => {
               const startTime = new Date(activity.start).toLocaleTimeString(
                 [],
                 { hour: "2-digit", minute: "2-digit" }

@@ -12,13 +12,11 @@
           :selected="activeButtonKey"
           @button-select="selectItinerary"
         />
-
         <h2>{{ displayDates }}</h2>
-
         <download-buttons
-          v-if="this.selectedDates.length && this.sortedEvents.length"
+          v-if="this.selectedDates.length && this.sortedActivities.length"
           :name="name"
-          :sorted-events="sortedEvents"
+          :sorted-activities="sortedActivities"
           :between-dates="betweenDates"
           :display-dates="displayDates"
           @delete-itinerary="deleteItinerary"
@@ -71,7 +69,11 @@
               v-model="viewDate.event.highlight"
               label="Highlight"
             ></v-checkbox>
-            <v-btn class="mr-4" :disabled="timeEditMessage" @click="saveEvent">
+            <v-btn
+              class="mr-4"
+              :disabled="timeEditMessage"
+              @click="saveItinerary"
+            >
               Save
             </v-btn>
             <v-btn @click="toggleEdit(false)">
@@ -110,7 +112,7 @@
           <activity-panel
             v-else
             @show-event="showEvent"
-            :activities="sortedEvents.flat()"
+            :activities="sortedActivities.flat()"
           />
         </section>
       </v-col>
@@ -122,83 +124,13 @@
             @change="nameChange"
           ></v-text-field>
         </v-row>
-        <v-sheet height="600">
-          <v-calendar
-            v-for="(day, index) in betweenDates"
-            :key="index"
-            :ref="`calendar-${index}`"
-            v-model="values[index]"
-            :weekdays="weekday"
-            :type="type"
-            :start="day"
-            popover
-            :events="(events[day] || {}).activities"
-            :event-overlap-mode="mode"
-            :event-overlap-threshold="30"
-            :event-color="getEventColor"
-            @mousedown:event="startDrag"
-            @mousedown:time="startTime($event, index)"
-            @mousemove:time="mouseMove"
-            @mouseup:time="endDrag"
-            @mouseleave.native="cancelDrag(index)"
-            @click:event="showEvent($event, index)"
-            @click:more="viewDay"
-            @click:date="viewDay"
-          >
-            <template v-slot:day="{ past, date }">
-              <v-row class="fill-height">
-                {{ past }}
-                {{ date }}
-              </v-row>
-            </template>
-            <template v-slot:day-body="{ date, week }">
-              <div
-                class="v-current-time activity-on-cal"
-                :class="{ first: date === week[0].date }"
-                :style="{ top: nowY }"
-              ></div>
-            </template>
-            <template v-slot:event="{ event, timed, eventSummary }">
-              <div class="v-event-draggable" v-html="eventSummary()"></div>
-              <v-img class="activity-cal-image" :src="event.imageUrl"></v-img>
-              <div
-                v-if="timed"
-                class="v-event-drag-bottom"
-                @mousedown.stop="extendBottom(event)"
-              ></div>
-            </template>
-          </v-calendar>
-          <v-menu
-            v-model="selectedOpen"
-            :close-on-content-click="false"
-            :activator="selectedElement"
-            offset-x
-          >
-            <v-card color="grey lighten-4" min-width="350px" flat>
-              <v-toolbar :color="selectedEvent.color" dark>
-                <v-btn icon>
-                  <v-icon>mdi-pencil</v-icon>
-                </v-btn>
-                <v-toolbar-title v-html="selectedEvent.name"></v-toolbar-title>
-                <v-spacer></v-spacer>
-                <v-btn icon>
-                  <v-icon>mdi-heart</v-icon>
-                </v-btn>
-                <v-btn icon>
-                  <v-icon>mdi-dots-vertical</v-icon>
-                </v-btn>
-              </v-toolbar>
-              <v-card-text>
-                <span v-html="selectedEvent.details"></span>
-              </v-card-text>
-              <v-card-actions>
-                <v-btn text color="secondary" @click="selectedOpen = false">
-                  Cancel
-                </v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-menu>
-        </v-sheet>
+        <trip-agenda
+          :between-dates="betweenDates"
+          :trip-days="tripDays"
+          @select-activity="viewDay"
+          @select-event="showEvent"
+          @create-event="createTripEvent"
+        />
       </v-col>
     </v-row>
   </v-container>
@@ -209,6 +141,7 @@
   import ActivityCard from "./ActivityCard";
   import TabBar from "./leftPanel/TabBar";
   import TripCalendar from "./leftPanel/TripCalendar";
+  import TripAgenda from "./middlePanel/TripAgenda";
   import ActivityPanel from "./leftPanel/ActivityPanel";
   import SaveStatus from "./SaveStatus";
   import TripsButtons from "./TripsButtons";
@@ -216,11 +149,22 @@
   import VueTimepicker from "vue2-timepicker/src/vue-timepicker.vue";
   import axios from "axios";
 
+  // const names = [
+  //   "Meeting",
+  //   "Holiday",
+  //   "PTO",
+  //   "Travel",
+  //   "Event",
+  //   "Birthday",
+  //   "Conference",
+  //   "Party"
+  // ];
   export default {
     name: "Dashboard",
     components: {
       ActivityPanel,
       TripsButtons,
+      TripAgenda,
       TabBar,
       TripCalendar,
       DownloadButtons,
@@ -228,14 +172,26 @@
       VueTimepicker,
       ActivityCard
     },
+
     data: () => ({
+      // Current Trip is the one on the active screen
+      // Contains, name, key, dates, basically one itinerary
+      currentTrip: {
+        dates: null,
+        betweenDates: null
+      },
+      // These are the trips modified since last check
+      modifiedTrips: [],
+      // Date since last change
+      lastChanged: null,
+      // If connected to network
       online: true,
       disabledModifyDateCheckbox: false,
+      // Login auth from google
       authorization: null,
+      // TODO
       activityImage: null,
       editActivityToggle: false,
-      changedEventsSinceLastSaved: [],
-      changedSinceLastSaved: false,
       selectedActivity: {
         start: {
           HH: "",
@@ -253,46 +209,8 @@
       focus: "",
       dates: [],
       tab: 0,
-      selectedOpen: false,
-      selectedEvent: {},
-      selectedElement: {},
-      betweenDates: [],
       selectedDates: [],
-      picker: new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-        .toISOString()
-        .substr(0, 10),
-      type: "day",
-      types: ["month", "week", "day", "4day"],
-      mode: "stack",
-      modes: ["stack", "column"],
-      weekday: [0, 1, 2, 3, 4, 5, 6],
-      weekdays: [
-        { text: "Sun - Sat", value: [0, 1, 2, 3, 4, 5, 6] },
-        { text: "Mon - Sun", value: [1, 2, 3, 4, 5, 6, 0] },
-        { text: "Mon - Fri", value: [1, 2, 3, 4, 5] },
-        { text: "Mon, Wed, Fri", value: [1, 3, 5] }
-      ],
-      values: {},
-      events: {},
-      colors: [
-        "blue",
-        "indigo",
-        "deep-purple",
-        "cyan",
-        "green",
-        "orange",
-        "grey darken-1"
-      ],
-      names: [
-        "Meeting",
-        "Holiday",
-        "PTO",
-        "Travel",
-        "Event",
-        "Birthday",
-        "Conference",
-        "Party"
-      ],
+      tripDays: {},
       dragEvent: null,
       dragStart: null,
       createEvent: null,
@@ -303,6 +221,7 @@
       activeButtonKey: null
     }),
     async mounted() {
+      this.setSaveInterval();
       // TODO: Fetch from DB
       this.online = this.networkConnected();
       this.authorization = this.$cookies.get("itinerator-token");
@@ -313,11 +232,15 @@
       this.setItineraries();
       this.$root.$on("login", data => {
         this.user = data;
-        console.log("logged in data:", data);
       });
-      // if (this.online) await this.getEvents()
+      // if (this.online) await this.getTripDays()
     },
     computed: {
+      betweenDates() {
+        if (!this.currentTrip.dates) return [];
+        if (this.currentTrip.betweenDates) return this.currentTrip.betweenDates;
+        return this.getBetweenDates(this.currentTrip.dates);
+      },
       hasDates() {
         return this.selectedDates.length > 0 && !!this.displayDates;
       },
@@ -332,10 +255,10 @@
         }
         return message;
       },
-      sortedEvents() {
-        if (!Object.keys(this.events).length) return [];
-        return this.betweenDates.map(d => {
-          return this.events[d].activities.sort((a, b) => {
+      sortedActivities() {
+        if (!Object.keys(this.tripDays).length) return [];
+        return this.betweenDates.map(date => {
+          return this.tripDays[date].activities.sort((a, b) => {
             return a.start - b.start;
           });
         });
@@ -353,10 +276,6 @@
         const todayBetween = this.betweenDatesMap.indexOf(this.today);
         return this.$refs[`calendar-${todayBetween}`];
       },
-      nowY() {
-        // TODO: FIX THIS
-        return this.cal ? this.cal.timeToY(this.cal.times.now) + "px" : "-10px";
-      },
       allItineraries() {
         return Object.entries(this.itineraries).map(([key, v]) => {
           return { ...v, key };
@@ -370,25 +289,38 @@
       }
     },
     methods: {
+      createTripEvent({ index, event }) {
+        this.tripDays[this.betweenDates[index]].activities.push(event);
+      },
+      // Set the interval to save to DB every 1 minute
+      setSaveInterval() {
+        setInterval(() => {
+          if (this.modifiedTrips.length) {
+            // await this.postItineraries();
+          }
+        }, 60000);
+      },
+      // Change flag to disable calendar
       disableModifyDate(value) {
         this.disabledModifyDateCheckbox = value;
       },
+      // Update which tab is selected
       updateTab(tab) {
         this.tab = tab;
       },
+      // Update modified calendar trip dates
       async saveModifiedDates() {
         this.disabledModifyDateCheckbox = !this.disabledModifyDateCheckbox;
         const tempActiveButtonKey = this.activeButtonKey;
-        const { events } = this.itineraries[tempActiveButtonKey];
+        const { tripDays } = this.itineraries[tempActiveButtonKey];
         if (this.dates.length < 2) this.dates.push(this.dates[0]);
         const newActiveButtonKey = this.stringifiedDates;
-        Object.keys(events).forEach(key => {
-          if (this.events[key]) {
-            this.events[key] = events[key];
+        Object.keys(tripDays).forEach(key => {
+          if (this.tripDays[key]) {
+            this.tripDays[key] = tripDays[key];
           }
         });
-        await this.saveEvents();
-        console.log("itineraries so far", this.itineraries);
+        await this.saveItineraries();
 
         if (tempActiveButtonKey !== newActiveButtonKey) {
           await this.deleteItinerary(tempActiveButtonKey);
@@ -415,11 +347,11 @@
         event.start = start.getTime();
         event.end = end.getTime();
       },
-      saveEvent() {
-        // const { event, index } = this.viewDate
-        // this.events[index] = event
+      saveItinerary() {
+        const { event, index } = this.viewDate;
+        this.tripDays[index] = event;
         this.updateEventTimes();
-        this.saveEvents();
+        this.saveItineraries();
         this.toggleEdit(false);
         // this.closeEvent()
       },
@@ -431,7 +363,7 @@
         this.dates = [];
         this.betweenDates = [];
         this.name = null;
-        await this.saveEvents();
+        await this.saveItineraries();
       },
       closeEvent() {
         this.viewDate = null;
@@ -449,14 +381,14 @@
 
       deleteEvent() {
         const { index, event } = this.viewDate;
-        const activityIndex = this.events[
+        const activityIndex = this.tripDays[
           this.betweenDates[index]
         ].activities.indexOf(event);
-        this.events[this.betweenDates[index]].activities.splice(
+        this.tripDays[this.betweenDates[index]].activities.splice(
           activityIndex,
           1
         );
-        this.saveEvent();
+        this.closeEvent();
       },
       showDate(event, index) {
         const start = new Date(event.start);
@@ -484,7 +416,7 @@
       },
       viewDay({ date }) {
         this.focus = date;
-        this.type = "day";
+        this.calendar.type = "day";
       },
       formatDates([first, second]) {
         const [date1, date2] = [
@@ -504,10 +436,9 @@
         this.activeButtonKey = key;
         this.selectedDates = this.activeButtonKey.split("_");
         this.dates = this.selectedDates;
-        this.betweenDates = this.getBetweenDates(this.dates);
-        console.log("GOT KEY", key, this.itineraries[this.activeButtonKey]);
-        const { events, name } = this.itineraries[this.activeButtonKey];
-        this.events = events;
+        // this.betweenDates = this.getBetweenDates(this.dates);
+        const { tripDays, name } = this.itineraries[this.activeButtonKey];
+        this.tripDays = tripDays;
         this.name = name;
         if (this.hasDates) this.disabledModifyDateCheckbox = true;
       },
@@ -515,8 +446,8 @@
         if (!itineraries || Object.keys(itineraries).length === 0) return {};
         Object.keys(itineraries).forEach(itinkey => {
           const itinerary = itineraries[itinkey];
-          Object.keys(itinerary.events).forEach(eventKey => {
-            const event = itinerary.events[eventKey];
+          Object.keys(itinerary.tripDays).forEach(eventKey => {
+            const event = itinerary.tripDays[eventKey];
             if (event.days) {
               event.activities = event.days;
               event.days = null;
@@ -531,15 +462,14 @@
         const localValue = JSON.parse(local);
         this.itineraries = this.changeDaysToActivities(localValue);
       },
-      async getEvents() {
-        const URI = "https://itinerator-api.herokuapp.com";
+      async getItineraries() {
+        // const URI = "https://itinerator-api.herokuapp.com";
         // const URI = 'http://localhost:3000'
-        const serverRes = await axios.get(`${URI}/users/fetch`, {
-          headers: {
-            Authorization: this.authorization
-          }
-        });
-        console.log("serverRes", serverRes);
+        // const serverRes = await axios.get(`${URI}/users/fetch`, {
+        //   headers: {
+        //     Authorization: this.authorization
+        //   }
+        // });
       },
       networkConnected() {
         return navigator.onLine;
@@ -548,9 +478,9 @@
         this.$cookies.remove("itinerator-token");
         this.authorization = null;
       },
-      async postEvents() {
+      async postItineraries() {
         console.log(
-          "Posting events",
+          "Posting Itineraries",
           this.networkConnected(),
           this.authorization
         );
@@ -567,7 +497,6 @@
         if (process.env.NODE_ENV === "development") {
           URI = "http://localhost:3000";
         }
-        console.log("ENV");
         const serverRes = await axios.post(
           `${URI}/users/save`,
           {
@@ -588,140 +517,21 @@
         this.lastSaved = Date.now();
         this.itineraries = serverRes.data.itineraries;
         this.activityImage = serverRes.data.image;
-        console.log("J", this.itineraries[this.activeButtonKey]);
-        console.log("save Itin", serverRes);
       },
-      async saveEvents() {
+      async saveItineraries() {
         if (this.stringifiedDates) {
           this.itineraries[this.stringifiedDates] = {
             ...this.itineraries[this.stringifiedDates],
             name: this.name,
-            events: this.events
+            tripDays: this.tripDays
           };
         }
-        await this.postEvents();
         localStorage.setItem("itinerator", JSON.stringify(this.itineraries));
         this.selectItinerary(this.stringifiedDates);
         this.setItineraries();
       },
-      startDrag({ event, timed }) {
-        if (event && timed) {
-          this.dragEvent = event;
-          this.dragTime = null;
-          this.extendOriginal = null;
-          this.saveEvents();
-        }
-      },
-      startTime(tms, index) {
-        const mouse = this.toTime(tms);
-
-        if (this.dragEvent && this.dragTime === null) {
-          const start = this.dragEvent.start;
-
-          this.dragTime = mouse - start;
-        } else {
-          this.createStart = this.roundTime(mouse);
-          this.createEvent = {
-            name: `Activity #${this.events[this.betweenDates[index]].activities
-              .length + 1}`,
-            color: this.rndElement(this.colors),
-            start: this.createStart,
-            end: this.createStart,
-            timed: true,
-            links: []
-          };
-          this.events[this.betweenDates[index]].activities.push(
-            this.createEvent
-          );
-          // this.events.forEach((day, dayIndex) => {
-          //   if (index !== dayIndex) day.pop()
-          // })
-          console.log("EVENTS", this.events);
-        }
-      },
-      extendBottom(event) {
-        this.createEvent = event;
-        this.createStart = event.start;
-        this.extendOriginal = event.end;
-        this.saveEvents();
-      },
-      mouseMove(tms) {
-        const mouse = this.toTime(tms);
-
-        if (this.dragEvent && this.dragTime !== null) {
-          const start = this.dragEvent.start;
-          const end = this.dragEvent.end;
-          const duration = end - start;
-          const newStartTime = mouse - this.dragTime;
-          const newStart = this.roundTime(newStartTime);
-          const newEnd = newStart + duration;
-
-          this.dragEvent.start = newStart;
-          this.dragEvent.end = newEnd;
-        } else if (this.createEvent && this.createStart !== null) {
-          const mouseRounded = this.roundTime(mouse, false);
-          const min = Math.min(mouseRounded, this.createStart);
-          const max = Math.max(mouseRounded, this.createStart);
-
-          this.createEvent.start = min;
-          this.createEvent.end = max;
-        }
-      },
-      endDrag() {
-        this.dragTime = null;
-        this.dragEvent = null;
-        this.createEvent = null;
-        this.createStart = null;
-        this.extendOriginal = null;
-        this.saveEvents();
-      },
-      cancelDrag(index) {
-        if (this.createEvent) {
-          if (this.extendOriginal) {
-            this.createEvent.end = this.extendOriginal;
-          } else {
-            const i = this.events[this.betweenDates[index]].activities.indexOf(
-              this.createEvent
-            );
-            if (i !== -1) {
-              this.events[this.betweenDates[index]].activities.splice(i, 1);
-            }
-          }
-        }
-
-        this.createEvent = null;
-        this.createStart = null;
-        this.dragTime = null;
-        this.dragEvent = null;
-      },
-      rnd(a, b) {
-        return Math.floor((b - a + 1) * Math.random()) + a;
-      },
-      rndElement(arr) {
-        return arr[this.rnd(0, arr.length - 1)];
-      },
-      roundTime(time, down = true) {
-        const roundTo = 15; // minutes
-        const roundDownTime = roundTo * 60 * 1000;
-
-        return down
-          ? time - (time % roundDownTime)
-          : time + (roundDownTime - (time % roundDownTime));
-      },
-      toTime(tms) {
-        return new Date(
-          tms.year,
-          tms.month - 1,
-          tms.day,
-          tms.hour,
-          tms.minute
-        ).getTime();
-      },
       slashDate(date) {
         return date.split("-").join("/");
-      },
-      nameChange() {
-        this.saveEvents();
       },
       getBetweenDates([startDate, endDate]) {
         startDate = new Date(this.slashDate(startDate));
@@ -739,18 +549,18 @@
         }
         return dates;
       },
+      nameChange() {
+        this.saveItineraries();
+      },
       emitDates(dates) {
+        this.currentTrip.dates = dates;
         this.selectedDates = dates;
-        this.betweenDates = this.getBetweenDates(dates);
-        this.events = this.betweenDates.reduce((accum, date) => {
+        this.currentTrip.betweenDates = this.getBetweenDates(dates);
+        this.tripDays = this.betweenDates.reduce((accum, date) => {
           accum[date] = { activities: [] };
           return accum;
         }, {});
-        console.log("MAKING EVENTS", this.events);
         this.dates = dates;
-      },
-      getEventColor(event) {
-        return event.color;
       }
     }
   };
