@@ -33,9 +33,7 @@
     name: "TripCalendar",
     watch: {
       selectedDates(newValue, oldValue) {
-        console.log("CHECKING change");
         if (newValue && newValue !== oldValue) {
-          console.log("TAKING change", newValue, oldValue);
           this.dates = this.selectedDates.split(",");
         }
       }

@@ -79,13 +79,13 @@
 </template>
 <script>
   const COLORS = [
-    "blue",
-    "indigo",
-    "deep-purple",
-    "cyan",
-    "green",
-    "orange",
-    "grey darken-1"
+    "blue"
+    // "indigo"
+    // "deep-purple",
+    // "cyan",
+    // "green",
+    // "orange",
+    // "grey darken-1"
   ];
 
   export default {

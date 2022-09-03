@@ -12,10 +12,9 @@
           :selected="activeButtonKey"
           @button-select="selectItinerary"
         />
-        <h2>{{ displayDates }}</h2>
         <download-buttons
           v-if="this.selectedDates.length && this.sortedActivities.length"
-          :name="name"
+          :name="currentTrip.name"
           :sorted-activities="sortedActivities"
           :between-dates="betweenDates"
           :display-dates="displayDates"
@@ -23,110 +22,115 @@
         />
       </v-col>
       <v-col class="left-col" cols="3" xs="1">
-        <section v-if="viewDate">
-          <form class="activity-edit" v-if="editActivityToggle">
-            <v-text-field
-              v-model="viewDate.event.name"
-              :counter="30"
-              label="Activity Name"
-              required
-            ></v-text-field>
-            <v-textarea
-              v-model="viewDate.event.description"
-              :counter="200"
-              label="Activity Details"
-            ></v-textarea>
-            <section class="time-picker">
-              <div>
-                Start Time:
-                <VueTimepicker
-                  format="HH:mm A"
-                  v-model="selectedActivity.start"
-                />
-                <br />
-              </div>
-              <div>
-                End Time:
-                <VueTimepicker
-                  format="HH:mm A"
-                  v-model="selectedActivity.end"
-                />
-              </div>
-            </section>
-            <div class="time-edit-message">
-              {{ timeEditMessage }}
-            </div>
-            <div v-for="(link, index) in viewDate.event.links" :key="index">
+        <section v-if="currentTrip.selected">
+          <section v-if="viewDate">
+            <form class="activity-edit" v-if="editActivityToggle">
               <v-text-field
-                v-model="link.value"
-                label="Activity Link"
+                v-model="viewDate.event.name"
+                :counter="30"
+                label="Activity Name"
+                required
               ></v-text-field>
-            </div>
-            <button @click="addLink">
-              Add Link
-            </button>
-            <v-checkbox
-              v-model="viewDate.event.highlight"
-              label="Highlight"
-            ></v-checkbox>
-            <v-btn
-              class="mr-4"
-              :disabled="timeEditMessage"
-              @click="saveItinerary"
-            >
-              Save
-            </v-btn>
-            <v-btn @click="toggleEdit(false)">
+              <v-textarea
+                v-model="viewDate.event.description"
+                :counter="200"
+                label="Activity Details"
+              ></v-textarea>
+              <section class="time-picker">
+                <div>
+                  Start Time:
+                  <VueTimepicker
+                    format="HH:mm A"
+                    v-model="selectedActivity.start"
+                  />
+                  <br />
+                </div>
+                <div>
+                  End Time:
+                  <VueTimepicker
+                    format="HH:mm A"
+                    v-model="selectedActivity.end"
+                  />
+                </div>
+              </section>
+              <div class="time-edit-message">
+                {{ timeEditMessage }}
+              </div>
+              <div v-for="(link, index) in viewDate.event.links" :key="index">
+                <v-text-field
+                  v-model="link.value"
+                  label="Activity Link"
+                ></v-text-field>
+              </div>
+              <button @click="addLink">
+                Add Link
+              </button>
+              <v-checkbox
+                v-model="viewDate.event.highlight"
+                label="Highlight"
+              ></v-checkbox>
+              <v-btn
+                class="mr-4"
+                :disabled="timeEditMessage"
+                @click="saveItinerary"
+              >
+                Save
+              </v-btn>
+              <!-- <v-btn @click="toggleEdit(false)">
               Close
-            </v-btn>
-            <v-btn @click="deleteEvent">
-              Delete
-            </v-btn>
-          </form>
-          <activity-card
-            class="activity-edit"
-            v-else
-            :name="viewDate.event.name"
-            :description="viewDate.event.description"
-            :start="viewDate.event.start"
-            :end="viewDate.event.end"
-            :links="viewDate.event.links"
-            :highlight="viewDate.event.highlight"
-            :image-url="viewDate.event.imageUrl || activityImage"
-            @edit="toggleEdit(true)"
-            @close="closeEvent"
-          />
-        </section>
-        <section class="activity-cal" v-else>
-          <tab-bar v-if="activeButtonKey" @tab-click="updateTab" />
-          <trip-calendar
-            v-if="tab === 0"
-            @disable-modify-date="disableModifyDate"
-            @emit-dates="emitDates"
-            @save-modified-dates="saveModifiedDates"
-            :selected-dates="selectedDates.join(',')"
-            :active-button-key="activeButtonKey"
-            :has-dates="hasDates"
-            :disabled-modify-date-checkbox="disabledModifyDateCheckbox"
-          />
-          <activity-panel
-            v-else
-            @show-event="showEvent"
-            :activities="sortedActivities.flat()"
-          />
+            </v-btn> -->
+              <v-btn @click="deleteEvent">
+                Delete
+              </v-btn>
+            </form>
+            <activity-card
+              class="activity-edit"
+              v-else
+              :name="viewDate.event.name"
+              :description="viewDate.event.description"
+              :start="viewDate.event.start"
+              :end="viewDate.event.end"
+              :links="viewDate.event.links"
+              :highlight="viewDate.event.highlight"
+              :image-url="viewDate.event.imageUrl || activityImage"
+              @edit="toggleEdit(true)"
+              @close="closeEvent"
+            />
+          </section>
+          <section class="activity-cal" v-else>
+            <tab-bar v-if="activeButtonKey" @tab-click="updateTab" />
+            <trip-calendar
+              v-if="tab === 0"
+              @disable-modify-date="disableModifyDate"
+              @emit-dates="emitDates"
+              @save-modified-dates="saveModifiedDates"
+              :selected-dates="stringifiedSelectedDates"
+              :active-button-key="activeButtonKey"
+              :has-dates="hasDates"
+              :disabled-modify-date-checkbox="disabledModifyDateCheckbox"
+            />
+            <activity-panel
+              v-else
+              @show-event="showEvent"
+              :activities="sortedActivities.flat()"
+            />
+          </section>
         </section>
       </v-col>
       <v-col cols="8" offset-md="1" xs="12">
-        <v-row justify="center">
-          <v-text-field
-            label="Trip Name"
-            v-model="name"
-            @change="nameChange"
-          ></v-text-field>
+        <v-row justify="center" v-if="currentTrip.selected">
+          <v-col>
+            <h2>{{ displayDates }}</h2>
+            <v-text-field
+              label="Trip Name"
+              v-model="currentTrip.name"
+              @change="nameChange"
+            ></v-text-field>
+          </v-col>
         </v-row>
         <trip-agenda
           :between-dates="betweenDates"
-          :trip-days="tripDays"
+          :trip-days="currentTrip.tripDays"
           @select-activity="viewDay"
           @select-event="showEvent"
           @create-event="createTripEvent"
@@ -177,8 +181,11 @@
       // Current Trip is the one on the active screen
       // Contains, name, key, dates, basically one itinerary
       currentTrip: {
+        name: null,
+        selected: false,
         dates: null,
-        betweenDates: null
+        betweenDates: null,
+        tripDays: {}
       },
       // These are the trips modified since last check
       modifiedTrips: [],
@@ -205,12 +212,8 @@
       saving: false,
       lastSaved: null,
       user: {},
-      name: "",
       focus: "",
-      dates: [],
       tab: 0,
-      selectedDates: [],
-      tripDays: {},
       dragEvent: null,
       dragStart: null,
       createEvent: null,
@@ -237,9 +240,8 @@
     },
     computed: {
       betweenDates() {
-        if (!this.currentTrip.dates) return [];
-        if (this.currentTrip.betweenDates) return this.currentTrip.betweenDates;
-        return this.getBetweenDates(this.currentTrip.dates);
+        if (!this.selectedDates.length) return [];
+        return this.getBetweenDates(this.selectedDates);
       },
       hasDates() {
         return this.selectedDates.length > 0 && !!this.displayDates;
@@ -256,9 +258,9 @@
         return message;
       },
       sortedActivities() {
-        if (!Object.keys(this.tripDays).length) return [];
+        if (!Object.keys(this.currentTrip.tripDays).length) return [];
         return this.betweenDates.map(date => {
-          return this.tripDays[date].activities.sort((a, b) => {
+          return this.currentTrip.tripDays[date].activities.sort((a, b) => {
             return a.start - b.start;
           });
         });
@@ -285,12 +287,24 @@
         return this.formatDates(this.selectedDates);
       },
       stringifiedDates() {
-        return this.dates.join("_");
+        return this.selectedDates.join("_");
+      },
+      selectedDates() {
+        if (!this.currentTrip.selected) return [];
+        const dates = this.activeButtonKey.split("_");
+        if (dates.length === 1) dates.push[dates[0]];
+        return dates;
+      },
+      stringifiedSelectedDates() {
+        return this.selectedDates.join(",");
       }
     },
     methods: {
       createTripEvent({ index, event }) {
-        this.tripDays[this.betweenDates[index]].activities.push(event);
+        this.currentTrip.tripDays[this.betweenDates[index]].activities.push(
+          event
+        );
+        this.saveItineraries();
       },
       // Set the interval to save to DB every 1 minute
       setSaveInterval() {
@@ -313,11 +327,10 @@
         this.disabledModifyDateCheckbox = !this.disabledModifyDateCheckbox;
         const tempActiveButtonKey = this.activeButtonKey;
         const { tripDays } = this.itineraries[tempActiveButtonKey];
-        if (this.dates.length < 2) this.dates.push(this.dates[0]);
         const newActiveButtonKey = this.stringifiedDates;
         Object.keys(tripDays).forEach(key => {
-          if (this.tripDays[key]) {
-            this.tripDays[key] = tripDays[key];
+          if (this.currentTrip.tripDays[key]) {
+            this.currentTrip.tripDays[key] = tripDays[key];
           }
         });
         await this.saveItineraries();
@@ -349,7 +362,7 @@
       },
       saveItinerary() {
         const { event, index } = this.viewDate;
-        this.tripDays[index] = event;
+        this.currentTrip.tripDays[index] = event;
         this.updateEventTimes();
         this.saveItineraries();
         this.toggleEdit(false);
@@ -358,11 +371,7 @@
       async deleteItinerary(targetKey) {
         const key = targetKey || this.activeButtonKey;
         delete this.itineraries[key];
-        this.selectedDates = [];
         this.disabledModifyDateCheckbox = false;
-        this.dates = [];
-        this.betweenDates = [];
-        this.name = null;
         await this.saveItineraries();
       },
       closeEvent() {
@@ -381,10 +390,10 @@
 
       deleteEvent() {
         const { index, event } = this.viewDate;
-        const activityIndex = this.tripDays[
+        const activityIndex = this.currentTrip.tripDays[
           this.betweenDates[index]
         ].activities.indexOf(event);
-        this.tripDays[this.betweenDates[index]].activities.splice(
+        this.currentTrip.tripDays[this.betweenDates[index]].activities.splice(
           activityIndex,
           1
         );
@@ -431,15 +440,14 @@
         this.activeButtonKey = null;
       },
       selectItinerary(key) {
-        if (!key) return;
+        this.currentTrip.selected = true;
+        if (!key || key === "new") return;
         this.clearActive();
         this.activeButtonKey = key;
-        this.selectedDates = this.activeButtonKey.split("_");
-        this.dates = this.selectedDates;
-        // this.betweenDates = this.getBetweenDates(this.dates);
-        const { tripDays, name } = this.itineraries[this.activeButtonKey];
-        this.tripDays = tripDays;
-        this.name = name;
+        const itinerary = this.itineraries[this.activeButtonKey];
+        Object.keys(itinerary).forEach(k => {
+          this.$set(this.currentTrip, k, itinerary[k]);
+        });
         if (this.hasDates) this.disabledModifyDateCheckbox = true;
       },
       changeDaysToActivities(itineraries) {
@@ -519,11 +527,13 @@
         this.activityImage = serverRes.data.image;
       },
       async saveItineraries() {
+        console.log("SAVING ITINERARIES");
+        // TODO: Mark this key as changed
         if (this.stringifiedDates) {
           this.itineraries[this.stringifiedDates] = {
             ...this.itineraries[this.stringifiedDates],
-            name: this.name,
-            tripDays: this.tripDays
+            name: this.currentTrip.name,
+            tripDays: this.currentTrip.tripDays
           };
         }
         localStorage.setItem("itinerator", JSON.stringify(this.itineraries));
@@ -550,17 +560,17 @@
         return dates;
       },
       nameChange() {
+        // TODO: don't save on name change?
+        // OR check if this is a new key and save?
         this.saveItineraries();
       },
       emitDates(dates) {
         this.currentTrip.dates = dates;
-        this.selectedDates = dates;
         this.currentTrip.betweenDates = this.getBetweenDates(dates);
         this.tripDays = this.betweenDates.reduce((accum, date) => {
           accum[date] = { activities: [] };
           return accum;
         }, {});
-        this.dates = dates;
       }
     }
   };

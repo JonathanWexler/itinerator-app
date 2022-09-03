@@ -2,6 +2,14 @@
   <div class="trip-buttons">
     <v-btn
       class="ma-2"
+      :outlined="'new' !== selected"
+      color="success"
+      @click="selectItinerary('new')"
+    >
+      New Itinerary
+    </v-btn>
+    <v-btn
+      class="ma-1"
       :outlined="itin.key !== selected"
       v-for="(itin, index) in itineraries"
       color="primary"
