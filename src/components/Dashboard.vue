@@ -137,6 +137,7 @@
           @select-event="showEvent"
           @save-event="saveItineraries"
           @create-event="createTripEvent"
+          @update-event="updateTripEvent"
         />
       </v-col>
     </v-row>
@@ -315,8 +316,19 @@
       }
     },
     methods: {
+      updateTripEvent({ index, event }) {
+        if (event.key) return;
+        this.currentTrip.tripDays[this.betweenDates[index]].activities.forEach(
+          activity => {
+            if (activity.name === event.name) {
+              activity.start = event.start;
+              activity.end = event.end;
+            }
+          }
+        );
+        this.saveItineraries();
+      },
       createTripEvent({ index, event }) {
-        console.log("changing");
         this.currentTrip.tripDays[this.betweenDates[index]].activities.push({
           ...event,
           key: `${Date.now()}`
@@ -384,6 +396,7 @@
       async deleteItinerary(targetKey) {
         const key = targetKey || this.activeButtonKey;
         delete this.itineraries[key];
+        this.clearActive();
         this.disabledModifyDateCheckbox = false;
         await this.saveItineraries();
       },

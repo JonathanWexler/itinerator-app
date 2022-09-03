@@ -15,8 +15,8 @@
       :event-color="getEventColor"
       @mousedown:event="startDrag"
       @mousedown:time="startTime($event, index)"
-      @mousemove:time="mouseMove"
-      @mouseup:time="endDrag"
+      @mousemove:time="mouseMove($event, index)"
+      @mouseup:time="endDrag($event, index)"
       @mouseleave.native="cancelDrag(index)"
       @click:event="$emit('select-event', { event: $event.event, index, day })"
       @click:more="$emit('select-activity')"
@@ -152,13 +152,13 @@
         return event.color;
       },
       extendBottom(event) {
-        console.log("EXTENDING");
+        console.log("EXTENDED");
         this.createEvent = event;
         this.createStart = event.start;
         this.extendOriginal = event.end;
         this.$emit("save-event");
       },
-      mouseMove(tms) {
+      mouseMove(tms, index) {
         const mouse = this.toTime(tms);
         if (this.dragEvent && this.dragTime !== null) {
           const start = this.dragEvent.start;
@@ -167,16 +167,15 @@
           const newStartTime = mouse - this.dragTime;
           const newStart = this.roundTime(newStartTime);
           const newEnd = newStart + duration;
-
           this.dragEvent.start = newStart;
           this.dragEvent.end = newEnd;
         } else if (this.createEvent && this.createStart !== null) {
           const mouseRounded = this.roundTime(mouse, false);
           const min = Math.min(mouseRounded, this.createStart);
           const max = Math.max(mouseRounded, this.createStart);
-
           this.createEvent.start = min;
           this.createEvent.end = max;
+          this.$emit("update-event", { index, event: this.createEvent });
         }
       },
       startTime(tms, index) {
@@ -198,9 +197,6 @@
             links: []
           };
           this.$emit("create-event", { index, event: this.createEvent });
-          // this.tripDays.forEach((day, dayIndex) => {
-          //   if (index !== dayIndex) day.pop()
-          // })
         }
       },
       rnd(a, b) {
@@ -210,12 +206,12 @@
         return arr[this.rnd(0, arr.length - 1)];
       },
       endDrag() {
+        this.$emit("save-event");
         this.dragTime = null;
         this.dragEvent = null;
         this.createEvent = null;
         this.createStart = null;
         this.extendOriginal = null;
-        this.$emit("save-event");
       },
       cancelDrag(index) {
         if (this.createEvent) {
