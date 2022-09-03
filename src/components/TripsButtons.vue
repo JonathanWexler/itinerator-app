@@ -53,3 +53,8 @@
     }
   };
 </script>
+<style lang="scss" scoped>
+  .trip-buttons {
+    padding-bottom: 20px;
+  }
+</style>

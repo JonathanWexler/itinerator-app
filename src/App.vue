@@ -1,10 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar
-      app
-      color="primary"
-      dark
-    >
+    <v-app-bar app color="primary" dark>
       <div class="d-flex align-center">
         <v-img
           alt="Vuetify Logo"
@@ -14,41 +10,46 @@
           transition="scale-transition"
           width="40"
         />
-
-        <v-img
+        <h1>JOURNEY DOC</h1>
+        <!-- <v-img
           alt="App Name"
           class="shrink mt-1 hidden-sm-and-down"
           contain
           min-width="100"
           src="https://i.imgur.com/P3JJtlS.png"
           width="200"
-        />
-      </div>  
+        /> -->
+      </div>
 
       <v-spacer></v-spacer>
-      <itinerator-google-identity-login />
+      <itinerator-google-identity-login @login="saveAuthorization" />
     </v-app-bar>
 
     <v-main>
-      <Dashboard/>
+      <Dashboard :auth="auth" />
     </v-main>
   </v-app>
 </template>
 
 <script>
-import Dashboard from './components/Dashboard';
-import ItineratorGoogleIdentityLogin from './components/GoogleIdentityLogin'
+  import Dashboard from "./components/Dashboard";
+  import ItineratorGoogleIdentityLogin from "./components/GoogleIdentityLogin";
 
-export default {
-  name: 'App',
-
-  components: {
-    Dashboard,
-    ItineratorGoogleIdentityLogin
-  },
-
-  data: () => ({
-    //
-  }),
-};
+  export default {
+    name: "App",
+    data() {
+      return {
+        auth: null
+      };
+    },
+    components: {
+      Dashboard,
+      ItineratorGoogleIdentityLogin
+    },
+    methods: {
+      saveAuthorization(auth) {
+        this.auth = auth;
+      }
+    }
+  };
 </script>

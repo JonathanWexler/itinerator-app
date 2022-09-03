@@ -87,9 +87,8 @@
           auth
         });
         if (serverRes) {
-          this.$root.$emit("login", serverRes.data);
+          this.$emit("login", serverRes.data.jwtToken);
           this.$cookies.set("itinerator-token", serverRes.data.jwtToken, "30d");
-          // localStorage.setItem('itinerator-token', serverRes.data.jwtToken);
         }
         this.loggedIn = true;
         this.loading = false;

@@ -2,6 +2,7 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
+        <h1 @click="postItineraries">SAVE</h1>
         <SaveStatus
           :last-saved="lastSaved"
           :loading="saving"
@@ -21,10 +22,28 @@
           @delete-itinerary="deleteItinerary"
         />
       </v-col>
-      <v-col class="left-col" cols="3" xs="1">
-        <section v-if="currentTrip.selected">
-          <section v-if="viewDate">
-            <form class="activity-edit" v-if="editActivityToggle">
+      <v-col class="left-col" cols="12" md="3">
+        <section class="panel-container" v-if="currentTrip.selected">
+          <section class="activity-cal" v-if="!this.viewDate">
+            <tab-bar v-if="activeButtonKey" @tab-click="updateTab" />
+            <trip-calendar
+              v-if="tab === 0"
+              @disable-modify-date="disableModifyDate"
+              @emit-dates="emitDates"
+              @save-modified-dates="saveModifiedDates"
+              :selected-dates="selectedDates"
+              :active-button-key="activeButtonKey"
+              :has-dates="hasDates"
+              :disabled-modify-date-checkbox="disabledModifyDateCheckbox"
+            />
+            <activity-panel
+              v-else
+              @show-event="showEvent"
+              :activities="sortedActivities.flat()"
+            />
+          </section>
+          <section class="activity-edit" v-else>
+            <form v-if="editActivityToggle">
               <v-text-field
                 v-model="viewDate.event.name"
                 :counter="30"
@@ -97,27 +116,9 @@
               @close="closeEvent"
             />
           </section>
-          <section class="activity-cal" v-else>
-            <tab-bar v-if="activeButtonKey" @tab-click="updateTab" />
-            <trip-calendar
-              v-if="tab === 0"
-              @disable-modify-date="disableModifyDate"
-              @emit-dates="emitDates"
-              @save-modified-dates="saveModifiedDates"
-              :selected-dates="selectedDates"
-              :active-button-key="activeButtonKey"
-              :has-dates="hasDates"
-              :disabled-modify-date-checkbox="disabledModifyDateCheckbox"
-            />
-            <activity-panel
-              v-else
-              @show-event="showEvent"
-              :activities="sortedActivities.flat()"
-            />
-          </section>
         </section>
       </v-col>
-      <v-col cols="8" offset-md="1" xs="12">
+      <v-col class="main-panel" cols="12" offset-md="1" md="8">
         <v-row justify="center" v-if="currentTrip.selected">
           <v-col>
             <h2>{{ displayDates }}</h2>
@@ -177,6 +178,14 @@
       VueTimepicker,
       ActivityCard
     },
+    props: {
+      auth: String
+    },
+    watch: {
+      auth(newAuth) {
+        this.authorization = newAuth;
+      }
+    },
 
     data: () => ({
       // Current Trip is the one on the active screen
@@ -189,7 +198,7 @@
         tripDays: {}
       },
       // These are the trips modified since last check
-      modifiedTrips: [],
+      changedTrips: new Set(),
       // Date since last change
       lastChanged: null,
       // If connected to network
@@ -222,11 +231,12 @@
       this.setSaveInterval();
       // TODO: Fetch from DB
       this.online = this.networkConnected();
-      this.authorization = this.$cookies.get("itinerator-token");
-      if (localStorage.getItem("itinerator-clear") !== "true") {
+      if (localStorage.getItem("itinerator-clear") !== "v1") {
         localStorage.setItem("itinerator", "{}");
-        localStorage.setItem("itinerator-clear", "true");
+        localStorage.setItem("itinerator-clear", "v1");
+        this.$cookies.remove("itinerator-token");
       }
+      this.authorization = this.$cookies.get("itinerator-token");
       this.setItineraries();
       this.$root.$on("login", data => {
         this.user = data;
@@ -303,7 +313,7 @@
       // Set the interval to save to DB every 1 minute
       setSaveInterval() {
         setInterval(() => {
-          if (this.modifiedTrips.length) {
+          if (this.changedTrips.length) {
             // await this.postItineraries();
           }
         }, 60000);
@@ -357,7 +367,6 @@
         this.updateEventTimes();
         this.saveItineraries();
         this.toggleEdit(false);
-        // this.closeEvent()
       },
       async deleteItinerary(targetKey) {
         const key = targetKey || this.activeButtonKey;
@@ -499,10 +508,11 @@
           console.log("Not online, no authorization");
         }
         this.saving = true;
-        const itinerary = this.itineraries[this.activeButtonKey];
-        console.log("post save", this.viewDate, itinerary);
-        const itineraries = this.itineraries;
-        console.log("itineraries check", this.itineraries);
+        const savingItineraries = {};
+        for (let key of this.changedTrips) {
+          savingItineraries[key] = this.itineraries[key];
+        }
+        console.log("itineraries check", savingItineraries);
         let URI = "https://itinerator-api.herokuapp.com";
         if (process.env.NODE_ENV === "development") {
           URI = "http://localhost:3000";
@@ -510,7 +520,7 @@
         const serverRes = await axios.post(
           `${URI}/users/save`,
           {
-            itineraries,
+            itineraries: savingItineraries,
             link: (this.viewDate || {})?.event?.links
           },
           {
@@ -523,18 +533,25 @@
           this.clearAuthorization();
           return;
         }
+        this.changedTrips = new Set();
         this.saving = false;
         this.lastSaved = Date.now();
-        this.itineraries = serverRes.data.itineraries;
+        Object.keys(serverRes.data.itineraries).forEach(key => {
+          const itinerary = serverRes.data.itineraries[key];
+          this.itineraries[key] = itinerary;
+          Object.keys(itinerary).forEach(k => {
+            this.$set(this.currentTrip, k, itinerary[k]);
+          });
+        });
         this.activityImage = serverRes.data.image;
       },
       async saveItineraries() {
-        // TODO: Mark this key as changed
         if (this.stringifiedDates) {
           if (!this.currentTrip.key) {
             const key = `${Date.now()}`;
             this.currentTrip.key = key;
           }
+          this.changedTrips.add(this.currentTrip.key);
           this.itineraries[this.currentTrip.key] = {
             ...this.itineraries[this.currentTrip.key],
             key: this.currentTrip.key,
@@ -630,12 +647,12 @@
   }
 
   .activity-edit {
-    width: 350px;
     position: fixed;
     top: 150px;
-    max-height: 550px;
+    // max-height: 550px;
     overflow-y: auto;
     padding-bottom: 5px;
+    margin-bottom: 25px;
     // padding-right: 15px;
     margin-right: 15px;
   }
@@ -702,5 +719,15 @@
   }
   .activity-on-cal {
     border: 1px solid yellow;
+  }
+  .panel-container {
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+  }
+  .main-panel {
+    background: white;
+    z-index: 3;
   }
 </style>
