@@ -42,7 +42,11 @@
           v-if="timed"
           class="v-event-drag-bottom"
           @mousedown.stop="extendBottom(event)"
-        ></div>
+        >
+          <v-icon small color="white darken-2">
+            mdi-arrow-expand-down
+          </v-icon>
+        </div>
       </template>
     </v-calendar>
     <v-menu
@@ -152,8 +156,7 @@
         this.createEvent = event;
         this.createStart = event.start;
         this.extendOriginal = event.end;
-        // TODO
-        // this.saveItineraries();
+        this.$emit("save-event");
       },
       mouseMove(tms) {
         const mouse = this.toTime(tms);
@@ -212,8 +215,7 @@
         this.createEvent = null;
         this.createStart = null;
         this.extendOriginal = null;
-        // TODO
-        // this.saveItineraries();
+        this.$emit("save-event");
       },
       cancelDrag(index) {
         if (this.createEvent) {
@@ -250,3 +252,10 @@
     }
   };
 </script>
+<style lang="scss" scoped>
+  .v-event-drag-bottom {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+  }
+</style>

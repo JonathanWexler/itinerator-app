@@ -133,6 +133,7 @@
           :trip-days="currentTrip.tripDays"
           @select-activity="viewDay"
           @select-event="showEvent"
+          @save-event="saveItineraries"
           @create-event="createTripEvent"
         />
       </v-col>
@@ -212,13 +213,7 @@
       saving: false,
       lastSaved: null,
       user: {},
-      focus: "",
       tab: 0,
-      dragEvent: null,
-      dragStart: null,
-      createEvent: null,
-      createStart: null,
-      extendOriginal: null,
       itineraries: {},
       viewDate: null,
       activeButtonKey: null
@@ -290,14 +285,16 @@
         return this.selectedDates.join("_");
       },
       selectedDates() {
-        if (!this.currentTrip.selected) return [];
-        const dates = this.activeButtonKey.split("_");
+        if (!this.currentTrip.dates || !this.currentTrip.dates.length)
+          return [];
+        const dates = this.currentTrip.dates;
         if (dates.length === 1) dates.push[dates[0]];
         return dates;
       }
     },
     methods: {
       createTripEvent({ index, event }) {
+        console.log("changing");
         this.currentTrip.tripDays[this.betweenDates[index]].activities.push(
           event
         );
@@ -320,22 +317,19 @@
         this.tab = tab;
       },
       // Update modified calendar trip dates
-      async saveModifiedDates() {
+      async saveModifiedDates(newDates) {
         this.disabledModifyDateCheckbox = !this.disabledModifyDateCheckbox;
-        const tempActiveButtonKey = this.activeButtonKey;
-        const { tripDays } = this.itineraries[tempActiveButtonKey];
-        const newActiveButtonKey = this.stringifiedDates;
-        Object.keys(tripDays).forEach(key => {
-          if (this.currentTrip.tripDays[key]) {
-            this.currentTrip.tripDays[key] = tripDays[key];
-          }
-        });
-        await this.saveItineraries();
+        const newActiveButtonKey = newDates.join("_");
+        const tempActiveButtonKey = this.currentTrip.stringifiedDates;
 
         if (tempActiveButtonKey !== newActiveButtonKey) {
-          await this.deleteItinerary(tempActiveButtonKey);
+          const newTripDays = this.betweenDates.reduce((accum, day) => {
+            accum[day] = this.currentTrip.tripDays[day];
+            return accum;
+          }, {});
+          this.$set(this.currentTrip, "tripDays", newTripDays);
         }
-        this.selectItinerary(newActiveButtonKey);
+        this.saveItineraries();
       },
       addLink(event) {
         event.preventDefault();
@@ -421,7 +415,7 @@
         this.showDate(event, index, nativeEvent);
       },
       viewDay({ date }) {
-        this.focus = date;
+        console.log("date", date);
         this.calendar.type = "day";
       },
       formatDates([first, second]) {
@@ -435,16 +429,27 @@
       },
       clearActive() {
         this.activeButtonKey = null;
+        Object.keys(this.currentTrip).forEach(key => {
+          this.$set(this.currentTrip, key, null);
+        });
       },
       selectItinerary(key) {
-        this.currentTrip.selected = true;
-        if (!key || key === "new") return;
         this.clearActive();
+        this.currentTrip.selected = true;
+        if (!key || key === "new") {
+          return;
+        }
         this.activeButtonKey = key;
         const itinerary = this.itineraries[this.activeButtonKey];
         Object.keys(itinerary).forEach(k => {
           this.$set(this.currentTrip, k, itinerary[k]);
         });
+        this.$set(
+          this.currentTrip,
+          "dates",
+          this.currentTrip.stringifiedDates.split("_")
+        );
+
         if (this.hasDates) this.disabledModifyDateCheckbox = true;
       },
       changeDaysToActivities(itineraries) {
@@ -524,17 +529,22 @@
         this.activityImage = serverRes.data.image;
       },
       async saveItineraries() {
-        console.log("SAVING ITINERARIES");
         // TODO: Mark this key as changed
         if (this.stringifiedDates) {
-          this.itineraries[this.stringifiedDates] = {
-            ...this.itineraries[this.stringifiedDates],
+          if (!this.currentTrip.key) {
+            const key = `${Date.now()}`;
+            this.currentTrip.key = key;
+          }
+          this.itineraries[this.currentTrip.key] = {
+            ...this.itineraries[this.currentTrip.key],
+            key: this.currentTrip.key,
+            stringifiedDates: this.stringifiedDates,
             name: this.currentTrip.name,
             tripDays: this.currentTrip.tripDays
           };
         }
         localStorage.setItem("itinerator", JSON.stringify(this.itineraries));
-        this.selectItinerary(this.stringifiedDates);
+        this.selectItinerary(this.currentTrip.key);
         this.setItineraries();
       },
       slashDate(date) {
@@ -563,11 +573,25 @@
       },
       emitDates(dates) {
         this.currentTrip.dates = dates;
-        this.currentTrip.betweenDates = this.getBetweenDates(dates);
-        this.tripDays = this.betweenDates.reduce((accum, date) => {
+        const newTripdays = this.betweenDates.reduce((accum, date) => {
           accum[date] = { activities: [] };
           return accum;
         }, {});
+        this.currentTrip.tripDays = {
+          ...newTripdays,
+          ...this.currentTrip.tripDays
+        };
+      },
+      base64DecodeUrl(str) {
+        str = (str + "===").slice(0, str.length + (str.length % 4));
+        return str.replace(/-/g, "+").replace(/_/g, "/");
+      },
+      base64EncodeUrl(str) {
+        /* eslint-disable no-useless-escape */
+        return str
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/\=+$/, "");
       }
     }
   };

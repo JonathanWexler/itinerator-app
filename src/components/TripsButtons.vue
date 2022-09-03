@@ -16,7 +16,7 @@
       :key="index"
       @click="selectItinerary(itin.key)"
     >
-      {{ itin.name || formatDates(itin.key.split("_")) }}
+      {{ buttonName(itin) }}
     </v-btn>
   </div>
 </template>
@@ -32,7 +32,15 @@
         type: String
       }
     },
+    computed: {},
     methods: {
+      buttonName(itin) {
+        if (itin.name) return itin.name;
+        if (itin.stringifiedDates) {
+          return this.formatDates(itin.stringifiedDates.split("_"));
+        }
+        return "...";
+      },
       selectItinerary(key) {
         this.$emit("button-select", key);
       },
