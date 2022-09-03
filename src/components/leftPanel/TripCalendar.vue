@@ -31,11 +31,12 @@
 <script>
   export default {
     name: "TripCalendar",
+    mounted() {
+      this.dates = this.selectedDates;
+    },
     watch: {
-      selectedDates(newValue, oldValue) {
-        if (newValue && newValue !== oldValue) {
-          this.dates = this.selectedDates.split(",");
-        }
+      selectedDates() {
+        this.dates = this.selectedDates;
       }
     },
     data() {
@@ -45,7 +46,8 @@
     },
     props: {
       selectedDates: {
-        type: String
+        type: Array,
+        default: () => []
       },
       disabledModifyDateCheckbox: {
         type: Boolean,

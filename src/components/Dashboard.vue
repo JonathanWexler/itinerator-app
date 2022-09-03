@@ -104,7 +104,7 @@
               @disable-modify-date="disableModifyDate"
               @emit-dates="emitDates"
               @save-modified-dates="saveModifiedDates"
-              :selected-dates="stringifiedSelectedDates"
+              :selected-dates="selectedDates"
               :active-button-key="activeButtonKey"
               :has-dates="hasDates"
               :disabled-modify-date-checkbox="disabledModifyDateCheckbox"
@@ -294,9 +294,6 @@
         const dates = this.activeButtonKey.split("_");
         if (dates.length === 1) dates.push[dates[0]];
         return dates;
-      },
-      stringifiedSelectedDates() {
-        return this.selectedDates.join(",");
       }
     },
     methods: {
