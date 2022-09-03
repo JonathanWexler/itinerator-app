@@ -1,5 +1,8 @@
 <template>
   <div class="SaveStatus">
+    <v-btn v-if="canSave" @click="$emit('save')" class="ma-2" color="success"
+      >Save</v-btn
+    >
     <pulse-loader
       v-if="loading"
       :loading="loading"
@@ -33,7 +36,8 @@
       loading: {
         type: Boolean,
         default: false
-      }
+      },
+      canSave: Boolean
     },
     mounted() {
       setInterval(() => {
@@ -63,11 +67,12 @@
 <style scoped lang="scss">
   .SaveStatus {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-content: center;
     align-items: center;
     width: 100px;
-    height: 50px;
+    min-height: 50px;
     position: fixed;
     right: 20px;
     color: lightgray;

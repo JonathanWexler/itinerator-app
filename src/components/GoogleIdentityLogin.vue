@@ -31,9 +31,11 @@
       };
     },
     mounted() {
-      if (this.getToken()) {
-        this.loggedIn = true;
-      }
+      this.$nextTick(() => {
+        if (this.getToken()) {
+          this.loggedIn = true;
+        }
+      });
     },
     methods: {
       async onLoginClick() {

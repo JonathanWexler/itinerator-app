@@ -18,7 +18,7 @@
       @mousemove:time="mouseMove"
       @mouseup:time="endDrag"
       @mouseleave.native="cancelDrag(index)"
-      @click:event="$emit('select-event', { event: $event.event, index })"
+      @click:event="$emit('select-event', { event: $event.event, index, day })"
       @click:more="$emit('select-activity')"
       @click:date="$emit('select-activity')"
     >

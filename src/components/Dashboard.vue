@@ -2,11 +2,12 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
-        <h1 @click="postItineraries">SAVE</h1>
         <SaveStatus
           :last-saved="lastSaved"
           :loading="saving"
           :offline="!online"
+          :can-save="!!changedTrips.size"
+          @save="postItineraries"
         />
         <trips-buttons
           :itineraries="allItineraries"
@@ -210,6 +211,7 @@
       activityImage: null,
       editActivityToggle: false,
       selectedActivity: {
+        day: null,
         start: {
           HH: "",
           mm: ""
@@ -231,9 +233,9 @@
       this.setSaveInterval();
       // TODO: Fetch from DB
       this.online = this.networkConnected();
-      if (localStorage.getItem("itinerator-clear") !== "v1") {
+      if (localStorage.getItem("itinerator-clear") !== "v2") {
         localStorage.setItem("itinerator", "{}");
-        localStorage.setItem("itinerator-clear", "v1");
+        localStorage.setItem("itinerator-clear", "v2");
         this.$cookies.remove("itinerator-token");
       }
       this.authorization = this.$cookies.get("itinerator-token");
@@ -261,6 +263,16 @@
           message = "Please update your time interval.";
         }
         return message;
+      },
+      activitiesMap() {
+        if (!Object.keys(this.currentTrip.tripDays).length) return [];
+        const map = {};
+        for (let { key, activities } of this.currentTrip.tripDays) {
+          for (let activity of activities) {
+            map[activity.key] = { ...activity, parent: key };
+          }
+        }
+        return map;
       },
       sortedActivities() {
         if (!Object.keys(this.currentTrip.tripDays).length) return [];
@@ -305,9 +317,10 @@
     methods: {
       createTripEvent({ index, event }) {
         console.log("changing");
-        this.currentTrip.tripDays[this.betweenDates[index]].activities.push(
-          event
-        );
+        this.currentTrip.tripDays[this.betweenDates[index]].activities.push({
+          ...event,
+          key: `${Date.now()}`
+        });
         this.saveItineraries();
       },
       // Set the interval to save to DB every 1 minute
@@ -362,8 +375,8 @@
         event.end = end.getTime();
       },
       saveItinerary() {
-        const { event, index } = this.viewDate;
-        this.currentTrip.tripDays[index] = event;
+        // const { event, index } = this.viewDate;
+        // this.currentTrip.tripDays[this.selectedActivity.day][index] = event;
         this.updateEventTimes();
         this.saveItineraries();
         this.toggleEdit(false);
@@ -377,6 +390,7 @@
       closeEvent() {
         this.viewDate = null;
         this.selectedActivity = {
+          day: null,
           start: {
             HH: "",
             mm: ""
@@ -399,9 +413,11 @@
         );
         this.closeEvent();
       },
-      showDate(event, index) {
+      showDate(event, index, parentKey) {
         const start = new Date(event.start);
         const end = new Date(event.end);
+        this.selectedActivity.day = parentKey;
+        console.log("parentKey", parentKey);
         this.selectedActivity.start.HH = (
           "0" + start.getHours().toString()
         ).slice(-2);
@@ -420,8 +436,8 @@
           index
         };
       },
-      showEvent({ nativeEvent, event, index }) {
-        this.showDate(event, index, nativeEvent);
+      showEvent({ event, index, day }) {
+        this.showDate(event, index, day);
       },
       viewDay({ date }) {
         console.log("date", date);
