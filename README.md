@@ -1,38 +1,51 @@
 # itinerator
 
 ## Project setup
+
 ```
 npm install
 ```
 
 ### Compiles and hot-reloads for development
+
 ```
 npm run serve
 ```
 
 ### Compiles and minifies for production
+
 ```
 npm run build
 serve -s dist
 ```
 
 ### Deploy
+
 ```
 npm run build
 serve -s dist
 ```
 
+### github
+
+```
+# Create build then enter dist and simply add commit and push -f, add CNAME journeydoc.com
+```
+
 ### Lints and fixes files
+
 ```
 npm run lint
 ```
 
 ### Customize configuration
+
 See [Configuration Reference](https://cli.vuejs.org/config/).
 
-## Deploy Heroku 
+## Deploy Heroku
 
 #### static.json
+
 ```
 {
   "root": "dist",
@@ -44,6 +57,7 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 ```
 
 #### CLI
+
 ```
 heroku login
 heroku create

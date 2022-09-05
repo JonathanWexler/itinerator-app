@@ -676,8 +676,8 @@
   }
 
   .activity-edit {
-    position: fixed;
-    top: 150px;
+    // position: fixed;
+    // top: 150px;
     // max-height: 550px;
     overflow-y: auto;
     padding-bottom: 5px;
@@ -691,20 +691,6 @@
     position: fixed;
     top: 150px;
     padding: 5px;
-  }
-  .activities-card {
-    width: 300px;
-    max-height: 500px;
-    overflow-y: scroll;
-  }
-
-  .list-activity {
-    width: 300px;
-    margin-bottom: 5px;
-    padding: 5px 0;
-    &:hover {
-      opacity: 0.8;
-    }
   }
 
   .time-picker {
@@ -750,6 +736,11 @@
     border: 1px solid yellow;
   }
   .panel-container {
+    top: 200px;
+    bottom: 0;
+    position: fixed;
+    overflow-y: scroll;
+    overflow-x: hidden;
     min-height: 400px;
     display: flex;
     align-items: center;

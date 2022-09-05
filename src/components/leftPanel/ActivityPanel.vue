@@ -4,7 +4,7 @@
       class="list-activity"
       v-for="(activityEvent, index) in activities"
       :key="index"
-      :color="activityEvent.color"
+      color="white"
       @click="$emit('show-event', { event: activityEvent, index })"
     >
       <h1>{{ activityEvent.name }}</h1>
@@ -34,4 +34,9 @@
     }
   };
 </script>
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+  .list-activity {
+    border: 1px solid lightgray !important;
+    margin: 8px 0;
+  }
+</style>
