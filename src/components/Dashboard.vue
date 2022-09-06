@@ -547,9 +547,9 @@
         }
         console.log("itineraries check", savingItineraries);
         let URI = "https://itinerator-api.herokuapp.com";
-        // if (process.env.NODE_ENV === "development") {
-        //   URI = "http://localhost:3000";
-        // }
+        if (process.env.NODE_ENV === "development") {
+          URI = "http://localhost:3000";
+        }
         const serverRes = await axios.post(
           `${URI}/users/save`,
           {
