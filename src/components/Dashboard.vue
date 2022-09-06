@@ -25,7 +25,7 @@
       </v-col>
       <v-col class="left-col" cols="12" md="3">
         <section class="panel-container" v-if="currentTrip.selected">
-          <section class="activity-cal" v-if="!this.viewDate">
+          <section class="activity-cal" v-if="!currentActivity.key">
             <tab-bar v-if="activeButtonKey" @tab-click="updateTab" />
             <trip-calendar
               v-if="tab === 0"
@@ -46,13 +46,13 @@
           <section class="activity-edit" v-else>
             <form v-if="editActivityToggle">
               <v-text-field
-                v-model="viewDate.event.name"
+                v-model="currentActivity.name"
                 :counter="30"
                 label="Activity Name"
                 required
               ></v-text-field>
               <v-textarea
-                v-model="viewDate.event.description"
+                v-model="currentActivity.description"
                 :counter="200"
                 label="Activity Details"
               ></v-textarea>
@@ -76,7 +76,7 @@
               <div class="time-edit-message">
                 {{ timeEditMessage }}
               </div>
-              <div v-for="(link, index) in viewDate.event.links" :key="index">
+              <div v-for="(link, index) in currentActivity.links" :key="index">
                 <v-text-field
                   v-model="link.value"
                   label="Activity Link"
@@ -86,7 +86,7 @@
                 Add Link
               </button>
               <v-checkbox
-                v-model="viewDate.event.highlight"
+                v-model="currentActivity.highlight"
                 label="Highlight"
               ></v-checkbox>
               <v-btn
@@ -106,13 +106,13 @@
             <activity-card
               class="activity-edit"
               v-else
-              :name="viewDate.event.name"
-              :description="viewDate.event.description"
-              :start="viewDate.event.start"
-              :end="viewDate.event.end"
-              :links="viewDate.event.links"
-              :highlight="viewDate.event.highlight"
-              :image-url="viewDate.event.imageUrl || activityImage"
+              :name="currentActivity.name"
+              :description="currentActivity.description"
+              :start="currentActivity.start"
+              :end="currentActivity.end"
+              :links="currentActivity.links"
+              :highlight="currentActivity.highlight"
+              :image-url="currentActivity.imageUrl"
               @edit="toggleEdit(true)"
               @close="closeEvent"
             />
@@ -133,7 +133,7 @@
         <trip-agenda
           :between-dates="betweenDates"
           :trip-days="currentTrip.tripDays"
-          :selected="viewDate"
+          :selected="currentActivity"
           @select-activity="viewDay"
           @select-event="showEvent"
           @save-event="saveItineraries"
@@ -209,8 +209,6 @@
       disabledModifyDateCheckbox: false,
       // Login auth from google
       authorization: null,
-      // TODO
-      activityImage: null,
       editActivityToggle: false,
       selectedActivity: {
         day: null,
@@ -228,7 +226,6 @@
       user: {},
       tab: 0,
       itineraries: {},
-      viewDate: null,
       activeButtonKey: null
     }),
     async mounted() {
@@ -248,6 +245,21 @@
       // if (this.online) await this.getTripDays()
     },
     computed: {
+      currentActivity() {
+        if (
+          !this.currentTrip.key ||
+          !this.selectedActivity.day ||
+          !this.currentTrip.tripDays[this.selectedActivity.day]
+        )
+          return {};
+        return (
+          this.currentTrip.tripDays[this.selectedActivity.day].activities.find(
+            activity => {
+              return activity.key === this.selectedActivity.key;
+            }
+          ) || {}
+        );
+      },
       betweenDates() {
         if (!this.selectedDates.length) return [];
         return this.getBetweenDates(this.selectedDates);
@@ -369,27 +381,24 @@
       },
       addLink(event) {
         event.preventDefault();
-        if (!this.viewDate.event.links) this.viewDate.event.links = [];
-        this.viewDate.event.links.push({ value: "" });
+        if (!this.currentActivity.links) this.currentActivity.links = [];
+        this.currentActivity.links.push({ value: "" });
       },
       toggleEdit(value) {
         this.editActivityToggle = !!value;
       },
       updateEventTimes() {
-        const { event } = this.viewDate;
-        const start = new Date(event.start);
-        const end = new Date(event.end);
+        const start = new Date(this.currentActivity.start);
+        const end = new Date(this.currentActivity.end);
         start.setHours(this.selectedActivity.start.HH);
         start.setMinutes(this.selectedActivity.start.mm);
         end.setHours(this.selectedActivity.end.HH);
         end.setMinutes(this.selectedActivity.end.mm);
 
-        event.start = start.getTime();
-        event.end = end.getTime();
+        this.currentActivity.start = start.getTime();
+        this.currentActivity.end = end.getTime();
       },
       saveItinerary() {
-        // const { event, index } = this.viewDate;
-        // this.currentTrip.tripDays[this.selectedActivity.day][index] = event;
         this.updateEventTimes();
         this.saveItineraries();
         this.toggleEdit(false);
@@ -402,8 +411,8 @@
         await this.saveItineraries();
       },
       closeEvent() {
-        this.viewDate = null;
         this.selectedActivity = {
+          key: null,
           day: null,
           start: {
             HH: "",
@@ -417,11 +426,10 @@
       },
 
       deleteEvent() {
-        const { index, event } = this.viewDate;
         const activityIndex = this.currentTrip.tripDays[
-          this.betweenDates[index]
-        ].activities.indexOf(event);
-        this.currentTrip.tripDays[this.betweenDates[index]].activities.splice(
+          this.selectedActivity.day
+        ].activities.indexOf(this.currentActivity);
+        this.currentTrip.tripDays[this.selectedActivity.day].activities.splice(
           activityIndex,
           1
         );
@@ -430,8 +438,8 @@
       showDate(event, index, parentKey) {
         const start = new Date(event.start);
         const end = new Date(event.end);
+        this.selectedActivity.key = event.key;
         this.selectedActivity.day = parentKey;
-        console.log("parentKey", parentKey);
         this.selectedActivity.start.HH = (
           "0" + start.getHours().toString()
         ).slice(-2);
@@ -444,11 +452,6 @@
         this.selectedActivity.end.mm = (
           "0" + end.getMinutes().toString()
         ).slice(-2);
-
-        this.viewDate = {
-          event,
-          index
-        };
       },
       showEvent({ event, index, day }) {
         this.showDate(event, index, day);
@@ -544,18 +547,19 @@
         }
         console.log("itineraries check", savingItineraries);
         let URI = "https://itinerator-api.herokuapp.com";
-        if (process.env.NODE_ENV === "development") {
-          URI = "http://localhost:3000";
-        }
+        // if (process.env.NODE_ENV === "development") {
+        //   URI = "http://localhost:3000";
+        // }
         const serverRes = await axios.post(
           `${URI}/users/save`,
           {
             itineraries: savingItineraries,
-            link: (this.viewDate || {})?.event?.links
+            link: (this.currentActivity || {})?.links
           },
           {
             headers: {
-              Authorization: this.authorization
+              Authorization: this.authorization,
+              "Access-Control-Allow-Origin": "*"
             }
           }
         );
@@ -573,7 +577,8 @@
             this.$set(this.currentTrip, k, itinerary[k]);
           });
         });
-        this.activityImage = serverRes.data.image;
+        this.$set(this.currentActivity, "imageUrl", serverRes.data.image);
+        this.saveItineraries();
       },
       async saveItineraries() {
         if (this.stringifiedDates) {

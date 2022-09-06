@@ -32,6 +32,7 @@ serve -s dist
 # Create build then enter dist and simply add commit and push -f, add CNAME journeydoc.com
 # try this
 https://gist.github.com/cobyism/4730490
+git subtree push --prefix dist client main
 ```
 
 ### Lints and fixes files
