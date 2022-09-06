@@ -102,6 +102,10 @@
       tripDays: {
         type: Object,
         default: () => {}
+      },
+      selected: {
+        type: Object,
+        default: () => {}
       }
     },
     data() {
@@ -149,7 +153,8 @@
         ).getTime();
       },
       getEventColor(event) {
-        return event.color;
+        if (this.selected && event === this.selected.event) return event.color;
+        return "#1976d2";
       },
       extendBottom(event) {
         console.log("EXTENDED");
@@ -249,6 +254,12 @@
   };
 </script>
 <style lang="scss" scoped>
+  .activity-cal-image {
+    max-width: 200px;
+    height: 100%;
+    position: absolute;
+    top: 0;
+  }
   .v-event-drag-bottom {
     position: absolute;
     bottom: 2px;

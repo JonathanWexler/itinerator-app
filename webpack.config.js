@@ -1,15 +1,18 @@
 // webpack.config.js
 
 module.exports = {
+  options: {
+    title: "Journey Doc",
+  },
   module: {
     rules: [
       {
         test: /\.s(c|a)ss$/,
         use: [
-          'vue-style-loader',
-          'css-loader',
+          "vue-style-loader",
+          "css-loader",
           {
-            loader: 'sass-loader',
+            loader: "sass-loader",
             // // Requires sass-loader@^7.0.0
             // options: {
             //   implementation: require('sass'),
@@ -17,14 +20,15 @@ module.exports = {
             // },
             // Requires >= sass-loader@^8.0.0
             options: {
-              implementation: require('sass'),
+              title: "Journey Doc",
+              implementation: require("sass"),
               sassOptions: {
-                indentedSyntax: true // optional
+                indentedSyntax: true, // optional
               },
             },
           },
         ],
       },
     ],
-  }
-}
+  },
+};

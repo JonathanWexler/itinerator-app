@@ -1,5 +1,6 @@
 <template>
   <v-app>
+    <title>JOURNEY DOC</title>
     <v-app-bar app color="primary" dark>
       <div class="d-flex align-center">
         <v-img

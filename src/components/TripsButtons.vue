@@ -6,7 +6,8 @@
       color="success"
       @click="selectItinerary('new')"
     >
-      New Itinerary
+      <v-icon medium color="green">mdi-plus-thick</v-icon>
+      Journey Doc
     </v-btn>
     <v-btn
       class="ma-1"

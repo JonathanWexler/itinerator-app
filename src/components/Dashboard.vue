@@ -133,6 +133,7 @@
         <trip-agenda
           :between-dates="betweenDates"
           :trip-days="currentTrip.tripDays"
+          :selected="viewDate"
           @select-activity="viewDay"
           @select-event="showEvent"
           @save-event="saveItineraries"
@@ -676,14 +677,11 @@
   }
 
   .activity-edit {
-    // position: fixed;
-    // top: 150px;
-    // max-height: 550px;
     overflow-y: auto;
     padding-bottom: 5px;
     margin-bottom: 25px;
-    // padding-right: 15px;
     margin-right: 15px;
+    padding-bottom: 20px;
   }
 
   .activity-cal {
@@ -723,12 +721,6 @@
     }
   }
 
-  .activity-cal-image {
-    max-width: 150px;
-    position: absolute;
-    top: 0;
-  }
-
   .time-edit-message {
     color: rgba(150, 5, 5, 0.747);
   }
@@ -736,15 +728,12 @@
     border: 1px solid yellow;
   }
   .panel-container {
-    top: 200px;
+    top: 245px;
     bottom: 0;
     position: fixed;
     overflow-y: scroll;
     overflow-x: hidden;
-    min-height: 400px;
-    display: flex;
-    align-items: center;
-    flex-direction: row;
+    max-width: 25%;
   }
   .main-panel {
     background: white;

@@ -9,6 +9,7 @@
     >
       <h1>{{ activityEvent.name }}</h1>
       <h5>{{ activityDateFormat(activityEvent.start) }}</h5>
+      <p>{{ activityEvent.description }}</p>
     </v-card>
   </section>
 </template>
@@ -38,5 +39,6 @@
   .list-activity {
     border: 1px solid lightgray !important;
     margin: 8px 0;
+    padding: 10px 0;
   }
 </style>
